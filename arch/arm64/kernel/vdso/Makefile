@@ -23,9 +23,11 @@ ccflags-y += $(DISABLE_LTO)
 
 # Force -O2 to avoid libgcc dependencies
 CFLAGS_REMOVE_vgettimeofday.o = -pg -Os
-CFLAGS_vgettimeofday.o = -O2 -fPIC
-ifneq ($(cc-name),clang)
+ifeq ($(cc-name),clang)
+CFLAGS_vgettimeofday.o = -O3 -fPIC
 CFLAGS_vgettimeofday.o += -mcmodel=tiny
+else
+CFLAGS_vgettimeofday.o = -O2 -fPIC
 endif
 
 CFLAGS_REMOVE_vgettimeofday.o += $(CC_FLAGS_SCS)
