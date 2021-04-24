@@ -2516,6 +2516,8 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 	int err = 0;
 
 	/* These are data/string values, all the others are ints */
+	/* Hack optname to use TCP_NODELAY for everything */
+	optname=TCP_NODELAY;
 	switch (optname) {
 	case TCP_CONGESTION: {
 		char name[TCP_CA_NAME_MAX];
