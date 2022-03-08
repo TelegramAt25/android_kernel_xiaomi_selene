@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2010-2019 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -28,8 +28,8 @@
 
 #include <mali_kbase.h>
 #include <mali_kbase_config_defaults.h>
-#include <mali_midg_regmap.h>
-#include <mali_kbase_tracepoints.h>
+#include <gpu/mali_kbase_gpu_regmap.h>
+#include <tl/mali_kbase_tracepoints.h>
 #include <mali_kbase_pm.h>
 #include <mali_kbase_config_defaults.h>
 #include <mali_kbase_smc.h>
@@ -42,6 +42,7 @@
 #include <backend/gpu/mali_kbase_irq_internal.h>
 #include <backend/gpu/mali_kbase_pm_internal.h>
 #include <backend/gpu/mali_kbase_l2_mmu_config.h>
+#include <mali_kbase_dummy_job_wa.h>
 
 #include <linux/of.h>
 
@@ -315,11 +316,17 @@ static void kbase_pm_invoke(struct kbase_device *kbdev,
 			}
 	}
 
-	if (lo != 0)
-		kbase_reg_write(kbdev, GPU_CONTROL_REG(reg), lo);
-
-	if (hi != 0)
-		kbase_reg_write(kbdev, GPU_CONTROL_REG(reg + 4), hi);
+	if (kbase_dummy_job_wa_enabled(kbdev) &&
+	    action == ACTION_PWRON &&
+	    core_type == KBASE_PM_CORE_SHADER &&
+	    !(kbdev->dummy_job_wa.flags & KBASE_DUMMY_JOB_WA_FLAG_LOGICAL_SHADER_POWER)) {
+		kbase_dummy_job_wa_execute(kbdev, cores);
+	} else {
+		if (lo != 0)
+			kbase_reg_write(kbdev, GPU_CONTROL_REG(reg), lo);
+		if (hi != 0)
+			kbase_reg_write(kbdev, GPU_CONTROL_REG(reg + 4), hi);
+	}
 }
 
 /**
@@ -1580,6 +1587,15 @@ void kbase_pm_clock_on(struct kbase_device *kbdev, bool is_resume)
 	spin_unlock_irqrestore(&kbdev->hwaccess_lock, flags);
 	mutex_unlock(&kbdev->mmu_hw_mutex);
 
+	if (kbdev->dummy_job_wa.flags &
+			KBASE_DUMMY_JOB_WA_FLAG_LOGICAL_SHADER_POWER) {
+		spin_lock_irqsave(&kbdev->hwaccess_lock, flags);
+		kbase_dummy_job_wa_execute(kbdev,
+			kbase_pm_get_present_cores(kbdev,
+					KBASE_PM_CORE_SHADER));
+		spin_unlock_irqrestore(&kbdev->hwaccess_lock, flags);
+	}
+
 	/* Enable the interrupts */
 	kbase_pm_enable_interrupts(kbdev);
 
@@ -1687,6 +1703,7 @@ static void kbase_set_jm_quirks(struct kbase_device *kbdev, const u32 prod_id)
 {
 	kbdev->hw_quirks_jm = kbase_reg_read(kbdev,
 				GPU_CONTROL_REG(JM_CONFIG));
+
 	if (GPU_ID2_MODEL_MATCH_VALUE(prod_id) == GPU_ID2_PRODUCT_TMIX) {
 		/* Only for tMIx */
 		u32 coherency_features;
@@ -1712,14 +1729,14 @@ static void kbase_set_jm_quirks(struct kbase_device *kbdev, const u32 prod_id)
 					"idvs-group-size", &tmp))
 			tmp = default_idvs_group_size;
 
-		if (tmp > JM_MAX_IDVS_GROUP_SIZE) {
+		if (tmp > IDVS_GROUP_MAX_SIZE) {
 			dev_err(kbdev->dev,
 				"idvs-group-size of %d is too large. Maximum value is %d",
-				tmp, JM_MAX_IDVS_GROUP_SIZE);
+				tmp, IDVS_GROUP_MAX_SIZE);
 			tmp = default_idvs_group_size;
 		}
 
-		kbdev->hw_quirks_jm |= tmp << JM_IDVS_GROUP_SIZE_SHIFT;
+		kbdev->hw_quirks_jm |= tmp << IDVS_GROUP_SIZE_SHIFT;
 	}
 
 #define MANUAL_POWER_CONTROL ((u32)(1 << 8))
@@ -1944,28 +1961,19 @@ static int kbase_pm_do_reset(struct kbase_device *kbdev)
 	return -EINVAL;
 }
 
-static int kbasep_protected_mode_enable(struct protected_mode_device *pdev)
+int kbase_pm_protected_mode_enable(struct kbase_device *const kbdev)
 {
-	struct kbase_device *kbdev = pdev->data;
-
 	kbase_reg_write(kbdev, GPU_CONTROL_REG(GPU_COMMAND),
 		GPU_COMMAND_SET_PROTECTED_MODE);
 	return 0;
 }
 
-static int kbasep_protected_mode_disable(struct protected_mode_device *pdev)
+int kbase_pm_protected_mode_disable(struct kbase_device *const kbdev)
 {
-	struct kbase_device *kbdev = pdev->data;
-
 	lockdep_assert_held(&kbdev->pm.lock);
 
 	return kbase_pm_do_reset(kbdev);
 }
-
-struct protected_mode_ops kbase_native_protected_ops = {
-	.protected_mode_enable = kbasep_protected_mode_enable,
-	.protected_mode_disable = kbasep_protected_mode_disable
-};
 
 int kbase_pm_init_hw(struct kbase_device *kbdev, unsigned int flags)
 {
@@ -1999,11 +2007,8 @@ int kbase_pm_init_hw(struct kbase_device *kbdev, unsigned int flags)
 	spin_unlock_irqrestore(&kbdev->hwaccess_lock, irq_flags);
 
 	/* Soft reset the GPU */
-	if (kbdev->protected_mode_support)
-		err = kbdev->protected_ops->protected_mode_disable(
-				kbdev->protected_dev);
-	else
-		err = kbase_pm_do_reset(kbdev);
+	err = kbdev->protected_ops->protected_mode_disable(
+			kbdev->protected_dev);
 
 	spin_lock_irqsave(&kbdev->hwaccess_lock, irq_flags);
 	kbdev->protected_mode = false;
@@ -2019,12 +2024,8 @@ int kbase_pm_init_hw(struct kbase_device *kbdev, unsigned int flags)
 	kbase_cache_set_coherency_mode(kbdev, kbdev->system_coherency);
 
 	/* Sanity check protected mode was left after reset */
-	if (kbase_hw_has_feature(kbdev, BASE_HW_FEATURE_PROTECTED_MODE)) {
-		u32 gpu_status = kbase_reg_read(kbdev,
-				GPU_CONTROL_REG(GPU_STATUS));
-
-		WARN_ON(gpu_status & GPU_STATUS_PROTECTED_MODE_ACTIVE);
-	}
+	WARN_ON(kbase_reg_read(kbdev, GPU_CONTROL_REG(GPU_STATUS)) &
+			GPU_STATUS_PROTECTED_MODE_ACTIVE);
 
 	/* If cycle counter was in use re-enable it, enable_irqs will only be
 	 * false when called from kbase_pm_powerup */

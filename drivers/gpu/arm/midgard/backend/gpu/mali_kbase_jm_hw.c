@@ -26,8 +26,8 @@
 
 #include <mali_kbase.h>
 #include <mali_kbase_config.h>
-#include <mali_midg_regmap.h>
-#include <mali_kbase_tracepoints.h>
+#include <gpu/mali_kbase_gpu_regmap.h>
+#include <tl/mali_kbase_tracepoints.h>
 #include <mali_kbase_hw.h>
 #include <mali_kbase_hwaccess_jm.h>
 #include <mali_kbase_reset_gpu.h>
@@ -36,9 +36,6 @@
 #include <backend/gpu/mali_kbase_device_internal.h>
 #include <backend/gpu/mali_kbase_irq_internal.h>
 #include <backend/gpu/mali_kbase_jm_internal.h>
-
-#define beenthere(kctx, f, a...) \
-			dev_dbg(kctx->kbdev->dev, "%s:" f, __func__, ##a)
 
 static void kbasep_try_reset_gpu_early_locked(struct kbase_device *kbdev);
 
@@ -142,8 +139,7 @@ void kbase_job_hw_submit(struct kbase_device *kbdev,
 
 	cfg |= JS_CONFIG_THREAD_PRI(8);
 
-	if (kbase_hw_has_feature(kbdev, BASE_HW_FEATURE_PROTECTED_MODE) &&
-		(katom->atom_flags & KBASE_KATOM_FLAG_PROTECTED))
+	if (katom->atom_flags & KBASE_KATOM_FLAG_PROTECTED)
 		cfg |= JS_CONFIG_DISABLE_DESCRIPTOR_WR_BK;
 
 	if (kbase_hw_has_feature(kbdev,
@@ -1281,4 +1277,3 @@ void kbase_reset_gpu_term(struct kbase_device *kbdev)
 {
 	destroy_workqueue(kbdev->hwaccess.backend.reset_workq);
 }
-

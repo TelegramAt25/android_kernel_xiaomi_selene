@@ -26,10 +26,11 @@
  */
 
 #include <mali_kbase.h>
+#include <gpu/mali_kbase_gpu_fault.h>
 #include <mali_kbase_hwaccess_jm.h>
 #include <mali_kbase_jm.h>
 #include <mali_kbase_js.h>
-#include <mali_kbase_tracepoints.h>
+#include <tl/mali_kbase_tracepoints.h>
 #include <mali_kbase_hwcnt_context.h>
 #include <mali_kbase_10969_workaround.h>
 #include <mali_kbase_reset_gpu.h>
@@ -297,9 +298,6 @@ static void kbase_gpu_release_atom(struct kbase_device *kbdev,
 				[katom->slot_nr]);
 
 	case KBASE_ATOM_GPU_RB_READY:
-		/* ***FALLTHROUGH: TRANSITION TO LOWER STATE*** */
-
-	case KBASE_ATOM_GPU_RB_WAITING_AFFINITY:
 		/* ***FALLTHROUGH: TRANSITION TO LOWER STATE*** */
 
 	case KBASE_ATOM_GPU_RB_WAITING_FOR_CORE_AVAILABLE:
@@ -931,12 +929,6 @@ void kbase_backend_slot_update(struct kbase_device *kbdev)
 					break;
 
 				katom[idx]->gpu_rb_state =
-					KBASE_ATOM_GPU_RB_WAITING_AFFINITY;
-
-				/* ***TRANSITION TO HIGHER STATE*** */
-				/* fallthrough */
-			case KBASE_ATOM_GPU_RB_WAITING_AFFINITY:
-				katom[idx]->gpu_rb_state =
 					KBASE_ATOM_GPU_RB_READY;
 
 				/* ***TRANSITION TO HIGHER STATE*** */
@@ -1125,8 +1117,7 @@ void kbase_gpu_complete_hw(struct kbase_device *kbdev, int js,
 		if (!kbase_ctx_flag(katom->kctx, KCTX_DYING))
 			dev_warn(kbdev->dev, "error detected from slot %d, job status 0x%08x (%s)",
 					js, completion_code,
-					kbase_exception_name
-					(kbdev,
+					kbase_gpu_exception_name(
 					completion_code));
 
 #if KBASE_TRACE_DUMP_ON_JOB_SLOT_ERROR != 0

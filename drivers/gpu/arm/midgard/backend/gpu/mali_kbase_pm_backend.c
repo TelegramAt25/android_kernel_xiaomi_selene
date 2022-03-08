@@ -1,6 +1,6 @@
  /*
  *
- * (C) COPYRIGHT 2010-2019 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -26,16 +26,17 @@
  */
 
 #include <mali_kbase.h>
-#include <mali_midg_regmap.h>
+#include <gpu/mali_kbase_gpu_regmap.h>
 #include <mali_kbase_config_defaults.h>
 
 #include <mali_kbase_pm.h>
 #include <mali_kbase_hwaccess_jm.h>
-#include <mali_kbase_hwcnt_context.h>
 #include <backend/gpu/mali_kbase_js_internal.h>
-#include <backend/gpu/mali_kbase_pm_internal.h>
 #include <backend/gpu/mali_kbase_jm_internal.h>
+#include <mali_kbase_hwcnt_context.h>
+#include <backend/gpu/mali_kbase_pm_internal.h>
 #include <backend/gpu/mali_kbase_devfreq.h>
+#include <mali_kbase_dummy_job_wa.h>
 
 static void kbase_pm_gpu_poweroff_wait_wq(struct work_struct *data);
 static void kbase_pm_hwcnt_disable_worker(struct work_struct *data);
@@ -615,7 +616,7 @@ void kbase_pm_power_changed(struct kbase_device *kbdev)
 	spin_lock_irqsave(&kbdev->hwaccess_lock, flags);
 	kbase_pm_update_state(kbdev);
 
-	kbase_backend_slot_update(kbdev);
+		kbase_backend_slot_update(kbdev);
 
 	spin_unlock_irqrestore(&kbdev->hwaccess_lock, flags);
 }
@@ -626,6 +627,11 @@ void kbase_pm_set_debug_core_mask(struct kbase_device *kbdev,
 {
 	lockdep_assert_held(&kbdev->hwaccess_lock);
 	lockdep_assert_held(&kbdev->pm.lock);
+
+	if (kbase_dummy_job_wa_enabled(kbdev)) {
+		dev_warn(kbdev->dev, "Change of core mask not supported for slot 0 as dummy job WA is enabled");
+		new_core_mask_js0 = kbdev->pm.debug_core_mask[0];
+	}
 
 	kbdev->pm.debug_core_mask[0] = new_core_mask_js0;
 	kbdev->pm.debug_core_mask[1] = new_core_mask_js1;

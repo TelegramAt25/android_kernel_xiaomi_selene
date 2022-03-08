@@ -23,7 +23,6 @@
 
 
 /**
- * @file mali_kbase_mem.c
  * Base kernel memory APIs
  */
 #include <linux/dma-buf.h>
@@ -38,13 +37,13 @@
 
 #include <mali_kbase_config.h>
 #include <mali_kbase.h>
-#include <mali_midg_regmap.h>
+#include <gpu/mali_kbase_gpu_regmap.h>
 #include <mali_kbase_cache_policy.h>
 #include <mali_kbase_hw.h>
-#include <mali_kbase_tracepoints.h>
+#include <tl/mali_kbase_tracepoints.h>
 #include <mali_kbase_native_mgm.h>
 #include <mali_kbase_mem_pool_group.h>
-
+#include <mmu/mali_kbase_mmu.h>
 
 /* Forward declarations */
 static void free_partial_locked(struct kbase_context *kctx,
@@ -1015,11 +1014,7 @@ void kbase_mem_term(struct kbase_device *kbdev)
 	if (kbdev->mgm_dev)
 		module_put(kbdev->mgm_dev->owner);
 }
-
 KBASE_EXPORT_TEST_API(kbase_mem_term);
-
-
-
 
 /**
  * @brief Allocate a free region object.
@@ -2622,6 +2617,12 @@ bool kbase_check_alloc_flags(unsigned long flags)
 	if ((flags & BASE_MEM_IMPORT_SHARED) == BASE_MEM_IMPORT_SHARED)
 		return false;
 
+	/* BASE_MEM_IMPORT_SYNC_ON_MAP_UNMAP is only valid for imported
+	 * memory */
+	if ((flags & BASE_MEM_IMPORT_SYNC_ON_MAP_UNMAP) ==
+			BASE_MEM_IMPORT_SYNC_ON_MAP_UNMAP)
+		return false;
+
 	/* Should not combine BASE_MEM_COHERENT_LOCAL with
 	 * BASE_MEM_COHERENT_SYSTEM */
 	if ((flags & (BASE_MEM_COHERENT_LOCAL | BASE_MEM_COHERENT_SYSTEM)) ==
@@ -2935,6 +2936,16 @@ KBASE_JIT_DEBUGFS_DECLARE(kbase_jit_debugfs_phys_fops,
 
 void kbase_jit_debugfs_init(struct kbase_context *kctx)
 {
+	/* prevent unprivileged use of debug file system
+         * in old kernel version
+         */
+#if (KERNEL_VERSION(4, 7, 0) <= LINUX_VERSION_CODE)
+	/* only for newer kernel version debug file system is safe */
+	const mode_t mode = 0444;
+#else
+	const mode_t mode = 0400;
+#endif
+
 	/* Caller already ensures this, but we keep the pattern for
 	 * maintenance safety.
 	 */
@@ -2942,22 +2953,24 @@ void kbase_jit_debugfs_init(struct kbase_context *kctx)
 		WARN_ON(IS_ERR_OR_NULL(kctx->kctx_dentry)))
 		return;
 
+
+
 	/* Debugfs entry for getting the number of JIT allocations. */
-	debugfs_create_file("mem_jit_count", S_IRUGO, kctx->kctx_dentry,
+	debugfs_create_file("mem_jit_count", mode, kctx->kctx_dentry,
 			kctx, &kbase_jit_debugfs_count_fops);
 
 	/*
 	 * Debugfs entry for getting the total number of virtual pages
 	 * used by JIT allocations.
 	 */
-	debugfs_create_file("mem_jit_vm", S_IRUGO, kctx->kctx_dentry,
+	debugfs_create_file("mem_jit_vm", mode, kctx->kctx_dentry,
 			kctx, &kbase_jit_debugfs_vm_fops);
 
 	/*
 	 * Debugfs entry for getting the number of physical pages used
 	 * by JIT allocations.
 	 */
-	debugfs_create_file("mem_jit_phys", S_IRUGO, kctx->kctx_dentry,
+	debugfs_create_file("mem_jit_phys", mode, kctx->kctx_dentry,
 			kctx, &kbase_jit_debugfs_phys_fops);
 }
 #endif /* CONFIG_DEBUG_FS */
@@ -3705,6 +3718,46 @@ static void kbase_jd_user_buf_unmap(struct kbase_context *kctx,
 		size -= local_size;
 	}
 	alloc->nents = 0;
+}
+
+int kbase_mem_copy_to_pinned_user_pages(struct page **dest_pages,
+		void *src_page, size_t *to_copy, unsigned int nr_pages,
+		unsigned int *target_page_nr, size_t offset)
+{
+	void *target_page = kmap(dest_pages[*target_page_nr]);
+	size_t chunk = PAGE_SIZE-offset;
+
+	if (!target_page) {
+		pr_err("%s: kmap failure", __func__);
+		return -ENOMEM;
+	}
+
+	chunk = min(chunk, *to_copy);
+
+	memcpy(target_page + offset, src_page, chunk);
+	*to_copy -= chunk;
+
+	kunmap(dest_pages[*target_page_nr]);
+
+	*target_page_nr += 1;
+	if (*target_page_nr >= nr_pages || *to_copy == 0)
+		return 0;
+
+	target_page = kmap(dest_pages[*target_page_nr]);
+	if (!target_page) {
+		pr_err("%s: kmap failure", __func__);
+		return -ENOMEM;
+	}
+
+	KBASE_DEBUG_ASSERT(target_page);
+
+	chunk = min(offset, *to_copy);
+	memcpy(target_page, src_page + PAGE_SIZE-offset, chunk);
+	*to_copy -= chunk;
+
+	kunmap(dest_pages[*target_page_nr]);
+
+	return 0;
 }
 
 struct kbase_mem_phy_alloc *kbase_map_external_resource(
