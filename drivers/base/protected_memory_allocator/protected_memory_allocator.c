@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2019 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2019-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -49,9 +49,9 @@ struct simple_pma_device {
 	struct device *dev;
 	bool *alloc_pages;
 	phys_addr_t rmem_base;
-	phys_addr_t rmem_size;
-	phys_addr_t free_pa_offset;
-	phys_addr_t num_free_pages;
+	size_t rmem_size;
+	size_t free_pa_offset;
+	size_t num_free_pages;
 };
 
 static struct protected_memory_allocation *simple_pma_alloc_page(
@@ -60,10 +60,10 @@ static struct protected_memory_allocation *simple_pma_alloc_page(
 	struct simple_pma_device *const epma_dev =
 		container_of(pma_dev, struct simple_pma_device, pma_dev);
 	struct protected_memory_allocation *pma;
-	phys_addr_t pa, num_pages;
-	unsigned int i;
+	size_t num_pages;
+	size_t i;
 
-	dev_dbg(epma_dev->dev, "%s(pma_dev=%p, order=%u\n",
+	dev_dbg(epma_dev->dev, "%s(pma_dev=%px, order=%u\n",
 		__func__, (void *)pma_dev, order);
 
 	/* This is an example function that follows an extremely simple logic
@@ -90,13 +90,12 @@ static struct protected_memory_allocation *simple_pma_alloc_page(
 	 * from the free_pa_offset. Verify that enough contiguous pages
 	 * are available and that they are all free.
 	 */
-	pa = epma_dev->rmem_base + epma_dev->free_pa_offset;
-	num_pages = (phys_addr_t)1 << order;
+	num_pages = (size_t)1 << order;
 
 	if (epma_dev->num_free_pages < num_pages)
 		dev_err(epma_dev->dev, "not enough free pages\n");
 
-	if (pa + num_pages > epma_dev->rmem_base + epma_dev->rmem_size) {
+	if (epma_dev->free_pa_offset + num_pages > epma_dev->rmem_size) {
 		dev_err(epma_dev->dev, "not enough contiguous pages\n");
 		return NULL;
 	}
@@ -120,7 +119,7 @@ static struct protected_memory_allocation *simple_pma_alloc_page(
 	if (!pma)
 		return NULL;
 
-	pma->pa = epma_dev->rmem_base + epma_dev->free_pa_offset;
+	pma->pa = epma_dev->rmem_base + (epma_dev->free_pa_offset << PAGE_SHIFT);
 	pma->order = order;
 
 	for (i = 0; i < num_pages; i++)
@@ -148,8 +147,8 @@ static phys_addr_t simple_pma_get_phys_addr(
 	struct simple_pma_device *const epma_dev =
 		container_of(pma_dev, struct simple_pma_device, pma_dev);
 
-	dev_dbg(epma_dev->dev, "%s(pma_dev=%p, pma=%p\n",
-		__func__, (void *)pma_dev, (void *)pma);
+	dev_dbg(epma_dev->dev, "%s(pma_dev=%px, pma=%px, pa=%llx\n",
+		__func__, (void *)pma_dev, (void *)pma, pma->pa);
 
 	return pma->pa;
 }
@@ -160,12 +159,12 @@ static void simple_pma_free_page(
 {
 	struct simple_pma_device *const epma_dev =
 		container_of(pma_dev, struct simple_pma_device, pma_dev);
-	phys_addr_t num_pages;
-	phys_addr_t offset;
-	unsigned int i;
+	size_t num_pages;
+	size_t offset;
+	size_t i;
 
-	dev_dbg(epma_dev->dev, "%s(pma_dev=%p, pma=%p\n",
-		__func__, (void *)pma_dev, (void *)pma);
+	dev_dbg(epma_dev->dev, "%s(pma_dev=%px, pma=%px, pa=%llx\n",
+		__func__, (void *)pma_dev, (void *)pma, pma->pa);
 
 	/* This is an example function that follows an extremely simple logic
 	 * and is vulnerable to abuse. For instance, double frees won't be
@@ -176,8 +175,8 @@ static void simple_pma_free_page(
 	 *
 	 * Increase the number of free pages and mark them as free.
 	 */
-	offset = pma->pa - epma_dev->rmem_base;
-	num_pages = (phys_addr_t)1 << pma->order;
+	offset = (pma->pa - epma_dev->rmem_base) >> PAGE_SHIFT;
+	num_pages = (size_t)1 << pma->order;
 
 	if (epma_dev->num_free_pages == 0)
 		epma_dev->free_pa_offset = offset;
@@ -194,7 +193,7 @@ static int protected_memory_allocator_probe(struct platform_device *pdev)
 	struct simple_pma_device *epma_dev;
 	struct device_node *np;
 	phys_addr_t rmem_base;
-	phys_addr_t rmem_size;
+	size_t rmem_size;
 #if (KERNEL_VERSION(4, 15, 0) <= LINUX_VERSION_CODE)
 	struct reserved_mem *rmem;
 #endif
@@ -233,6 +232,7 @@ static int protected_memory_allocator_probe(struct platform_device *pdev)
 	epma_dev->pma_dev.ops.pma_alloc_page = simple_pma_alloc_page;
 	epma_dev->pma_dev.ops.pma_get_phys_addr = simple_pma_get_phys_addr;
 	epma_dev->pma_dev.ops.pma_free_page = simple_pma_free_page;
+	epma_dev->pma_dev.owner = THIS_MODULE;
 	epma_dev->dev = &pdev->dev;
 	epma_dev->rmem_base = rmem_base;
 	epma_dev->rmem_size = rmem_size;
@@ -251,7 +251,7 @@ static int protected_memory_allocator_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, &epma_dev->pma_dev);
 	dev_info(&pdev->dev,
 		"Protected memory allocator probed successfully\n");
-	dev_info(&pdev->dev, "Protected memory region: base=%llx num pages=%llx\n",
+	dev_info(&pdev->dev, "Protected memory region: base=%llx num pages=%zu\n",
 		rmem_base, rmem_size);
 
 	return 0;
@@ -271,7 +271,7 @@ static int protected_memory_allocator_remove(struct platform_device *pdev)
 	dev = epma_dev->dev;
 
 	if (epma_dev->num_free_pages < epma_dev->rmem_size) {
-		dev_warn(&pdev->dev, "Leaking %llu pages of protected memory\n",
+		dev_warn(&pdev->dev, "Leaking %zu pages of protected memory\n",
 			epma_dev->rmem_size - epma_dev->num_free_pages);
 	}
 

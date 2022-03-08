@@ -1,6 +1,6 @@
 /*
  *
- * (C) COPYRIGHT 2012-2019 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2012-2020 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -417,8 +417,10 @@ static struct dma_buf_ops dma_buf_te_ops = {
 	/* nop handlers for mandatory functions we ignore */
 	.kmap_atomic = dma_buf_te_kmap_atomic
 #else
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 6, 0)
 	.map = dma_buf_te_kmap,
 	.unmap = dma_buf_te_kunmap,
+#endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 19, 0)
 	/* nop handlers for mandatory functions we ignore */
@@ -725,16 +727,22 @@ static u32 dma_te_buf_fill(struct dma_buf *dma_buf, unsigned int value)
 
 	for_each_sg(sgt->sgl, sg, sgt->nents, count) {
 		for (i = 0; i < sg_dma_len(sg); i = i + PAGE_SIZE) {
-			void *addr;
-
+			void *addr = NULL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
+			addr = dma_buf_te_kmap(dma_buf, i >> PAGE_SHIFT);
+#else
 			addr = dma_buf_kmap(dma_buf, i >> PAGE_SHIFT);
+#endif
 			if (!addr) {
-				/* dma_buf_kmap is unimplemented in exynos and returns NULL */
 				ret = -EPERM;
 				goto no_kmap;
 			}
 			memset(addr, value, PAGE_SIZE);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 6, 0)
+			dma_buf_te_kunmap(dma_buf, i >> PAGE_SHIFT, addr);
+#else
 			dma_buf_kunmap(dma_buf, i >> PAGE_SHIFT, addr);
+#endif
 		}
 		offset += sg_dma_len(sg);
 	}
@@ -825,4 +833,3 @@ static void __exit dma_buf_te_exit(void)
 module_init(dma_buf_te_init);
 module_exit(dma_buf_te_exit);
 MODULE_LICENSE("GPL");
-
