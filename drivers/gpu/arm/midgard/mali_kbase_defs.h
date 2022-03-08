@@ -191,6 +191,7 @@ struct kbase_io_history {
 	struct kbase_io_access *buf;
 };
 
+
 /**
  * struct kbase_debug_copy_buffer - information about the buffer to be copied.
  *
@@ -586,6 +587,21 @@ struct kbase_mmu_mode const *kbase_mmu_mode_get_lpae(void);
 struct kbase_mmu_mode const *kbase_mmu_mode_get_aarch64(void);
 
 #define DEVNAME_SIZE	16
+
+#if defined(MTK_GPU_BM_2)
+struct job_status_qos {
+        phys_addr_t phyaddr;
+        size_t size;
+};
+
+struct v1_data {
+        unsigned int version;
+        unsigned int ctx;
+        unsigned int frame;
+        unsigned int job;
+        unsigned int freq;
+};
+#endif
 
 /**
  * enum kbase_devfreq_work_type - The type of work to perform in the devfreq
@@ -1159,6 +1175,11 @@ struct kbase_device {
 		/* Pointer to the arbiter device */
 		struct kbase_arbiter_device arb;
 #endif
+
+#if defined(MTK_GPU_BM_2)
+        struct job_status_qos job_status_addr;
+        struct v1_data* v1;
+#endif
 };
 
 /**
@@ -1558,6 +1579,8 @@ struct kbase_sub_alloc {
  * @atoms_count:          Number of GPU atoms currently in use, per priority
  * @create_flags:         Flags used in context creation.
  * @kinstr_jm:            Kernel job manager instrumentation context handle
+ * @tl_kctx_list_node:    List item into the device timeline's list of
+ *                        contexts, for timeline summarization.
  *
  * A kernel base context is an entity among which the GPU is scheduled.
  * Each context has its own GPU address space.
@@ -1696,6 +1719,7 @@ struct kbase_context {
 	base_context_create_flags create_flags;
 
 	struct kbase_kinstr_jm *kinstr_jm;
+	struct list_head tl_kctx_list_node;
 };
 
 #ifdef CONFIG_MALI_CINSTR_GWT
