@@ -1,6 +1,6 @@
-# SPDX-License-Identifier: GPL-2.0
+# SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 #
-# (C) COPYRIGHT 2017, 2020 ARM Limited. All rights reserved.
+# (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
 #
 # This program is free software and is provided to you under the terms of the
 # GNU General Public License version 2 as published by the Free Software
@@ -18,11 +18,4 @@
 #
 #
 
-config MALI_IRQ_LATENCY
- tristate "Mali GPU IRQ latency measurement"
- depends on MALI_MIDGARD && MALI_DEBUG && MALI_KUTF
- default m
- help
-   This option will build a test module mali_kutf_irq_test that
-   can determine the latency of the Mali GPU IRQ on your system.
-   Choosing M here will generate a single module called mali_kutf_irq_test.
+include midgard/Makefile
