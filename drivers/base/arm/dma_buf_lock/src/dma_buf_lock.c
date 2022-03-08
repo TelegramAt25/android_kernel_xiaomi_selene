@@ -346,8 +346,10 @@ dma_buf_lock_add_fence_reservation_callback(dma_buf_lock_resource *resource,
 
 #if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
 	err = reservation_object_get_fences_rcu(
-#else
+#elif (KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE)
 	err = dma_resv_get_fences_rcu(
+#else
+	err = dma_resv_get_fences(
 #endif
 						resv,
 						&excl_fence,
