@@ -20,7 +20,7 @@
 #ifdef ENABLE_COMMON_DVFS
 #include "mtk_gpufreq.h"
 #endif /* ENABLE_COMMON_DVFS */
-#include <mali_kbase_pm_internal.h>
+#include <backend/gpu/mali_kbase_pm_internal.h>
 
 #include <ged_log.h>
 #include <ged_dvfs.h>

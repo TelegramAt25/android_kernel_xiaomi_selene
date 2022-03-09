@@ -216,7 +216,7 @@ struct v1_data *gpu_info_ref;
 
 #ifdef ENABLE_COMMON_DVFS
 /* MTK GPU DVFS */
-#include <mali_kbase_pm_internal.h>
+#include <backend/gpu/mali_kbase_pm_internal.h>
 static struct kbase_device *g_malidev;
 
 struct kbase_device *mtk_get_mali_dev(void)
