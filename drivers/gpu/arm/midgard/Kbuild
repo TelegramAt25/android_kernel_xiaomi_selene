@@ -177,7 +177,7 @@ mali_kbase-y := \
     mali_kbase_core_linux.o \
     mali_kbase_mem_profile_debugfs.o \
     mali_kbase_disjoint_events.o \
-	mali_kbase_gator_api.o \
+    mali_kbase_gator_api.o \
     mali_kbase_debug_mem_view.o \
     mali_kbase_smc.o \
     mali_kbase_mem_pool.o \
@@ -232,7 +232,7 @@ else
         mali_kbase_fence.o
 endif
 
-mali_kbase-y += += mali_gputrace.o
+mali_kbase-y += mali_gputrace.o
 
 INCLUDE_SUBDIR = \
     $(src)/context/Kbuild \
