@@ -140,7 +140,8 @@ ccflags-y += \
     -I$(src) \
     -I$(src)/platform/$(MALI_PLATFORM_DIR) \
     -I$(src)/../../../base \
-    -I$(src)/../../../../include
+    -I$(src)/../../../../include \
+    -I$(src)/include
 
 subdir-ccflags-y += $(ccflags-y)
 
