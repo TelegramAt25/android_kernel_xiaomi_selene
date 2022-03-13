@@ -1,7 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2019-2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -46,7 +46,7 @@ struct protected_memory_allocator_device;
  * @pma_free_page:     Callback to free protected memory
  */
 struct protected_memory_allocator_ops {
-	/**
+	/*
 	 * pma_alloc_page - Allocate protected memory pages
 	 *
 	 * @pma_dev: The protected memory allocator the request is being made
@@ -59,7 +59,7 @@ struct protected_memory_allocator_ops {
 		struct protected_memory_allocator_device *pma_dev,
 		unsigned int order);
 
-	/**
+	/*
 	 * pma_get_phys_addr - Get the physical address of the protected memory
 	 *                     allocation
 	 *
@@ -74,7 +74,7 @@ struct protected_memory_allocator_ops {
 		struct protected_memory_allocator_device *pma_dev,
 		struct protected_memory_allocation *pma);
 
-	/**
+	/*
 	 * pma_free_page - Free a page of memory
 	 *
 	 * @pma_dev: The protected memory allocator the request is being made

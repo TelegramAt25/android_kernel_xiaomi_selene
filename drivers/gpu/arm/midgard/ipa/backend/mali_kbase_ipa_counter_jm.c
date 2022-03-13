@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2016-2021 ARM Limited. All rights reserved.
@@ -23,9 +23,10 @@
 
 #include "mali_kbase_ipa_counter_common_jm.h"
 #include "mali_kbase.h"
-#ifdef CONFIG_MALI_NO_MALI
+
+#if IS_ENABLED(CONFIG_MALI_NO_MALI)
 #include <backend/gpu/mali_kbase_model_dummy.h>
-#endif
+#endif /* CONFIG_MALI_NO_MALI */
 
 /* Performance counter blocks base offsets */
 #define JM_BASE             (0 * KBASE_IPA_NR_BYTES_PER_BLOCK)
@@ -96,7 +97,7 @@ static u32 kbase_g7x_power_model_get_memsys_counter(struct kbase_ipa_model_vinst
 static u32 kbase_g7x_power_model_get_sc_counter(struct kbase_ipa_model_vinstr_data *model_data,
 						u32 counter_block_offset)
 {
-#ifdef CONFIG_MALI_NO_MALI
+#if IS_ENABLED(CONFIG_MALI_NO_MALI)
 	const u32 sc_base = MEMSYS_BASE +
 		(KBASE_DUMMY_MODEL_MAX_MEMSYS_BLOCKS *
 		 KBASE_IPA_NR_BYTES_PER_BLOCK);
@@ -110,20 +111,21 @@ static u32 kbase_g7x_power_model_get_sc_counter(struct kbase_ipa_model_vinstr_da
 
 /**
  * memsys_single_counter() - calculate energy for a single Memory System performance counter.
- * @model_data:   pointer to GPU model data.
- * @coeff:        default value of coefficient for IPA group.
- * @offset:       offset in bytes of the counter inside the block it belongs to.
+ * @model_data:            pointer to GPU model data.
+ * @coeff:                 default value of coefficient for IPA group.
+ * @counter_block_offset:  offset in bytes of the counter inside the block it belongs to.
  *
  * Return: Energy estimation for a single Memory System performance counter.
  */
 static s64 kbase_g7x_sum_all_memsys_blocks(
 		struct kbase_ipa_model_vinstr_data *model_data,
 		s32 coeff,
-		u32 offset)
+		u32 counter_block_offset)
 {
 	u32 counter;
 
-	counter = kbase_g7x_power_model_get_memsys_counter(model_data, offset);
+	counter = kbase_g7x_power_model_get_memsys_counter(model_data,
+						     counter_block_offset);
 	return kbase_ipa_sum_all_memsys_blocks(model_data, coeff, counter);
 }
 
@@ -530,8 +532,8 @@ const struct kbase_ipa_model_ops *kbase_ipa_counter_model_ops_find(
 
 const char *kbase_ipa_counter_model_name_from_id(u32 gpu_id)
 {
-	const u32 prod_id = (gpu_id & GPU_ID_VERSION_PRODUCT_ID) >>
-			GPU_ID_VERSION_PRODUCT_ID_SHIFT;
+	const u32 prod_id =
+		(gpu_id & GPU_ID_VERSION_PRODUCT_ID) >> KBASE_GPU_ID_VERSION_PRODUCT_ID_SHIFT;
 
 	switch (GPU_ID2_MODEL_MATCH_VALUE(prod_id)) {
 	case GPU_ID2_PRODUCT_TMIX:

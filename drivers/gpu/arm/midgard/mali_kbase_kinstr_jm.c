@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
@@ -30,7 +30,7 @@
 #include "mali_kbase.h"
 #include "mali_kbase_linux.h"
 
-#include <mali_kbase_jm_rb.h>
+#include <backend/gpu/mali_kbase_jm_rb.h>
 
 #include <asm/barrier.h>
 #include <linux/anon_inodes.h>
@@ -47,9 +47,14 @@
 #include <linux/version.h>
 #include <linux/wait.h>
 
+/* Define static_assert().
+ *
+ * The macro was introduced in kernel 5.1. But older vendor kernels may define
+ * it too.
+ */
 #if KERNEL_VERSION(5, 1, 0) <= LINUX_VERSION_CODE
 #include <linux/build_bug.h>
-#else
+#elif !defined(static_assert)
 // Stringify the expression if no message is given.
 #define static_assert(e, ...)  __static_assert(e, #__VA_ARGS__, #e)
 #define __static_assert(e, msg, ...) _Static_assert(e, msg)
@@ -204,9 +209,8 @@ struct reader_changes {
  */
 static inline bool reader_changes_is_valid_size(const size_t size)
 {
-	typedef struct reader_changes changes_t;
-	const size_t elem_size = sizeof(*((changes_t *)0)->data);
-	const size_t size_size = sizeof(((changes_t *)0)->size);
+	const size_t elem_size = sizeof(*((struct reader_changes *)0)->data);
+	const size_t size_size = sizeof(((struct reader_changes *)0)->size);
 	const size_t size_max = (1ull << (size_size * 8)) - 1;
 
 	return is_power_of_2(size) && /* Is a power of two */

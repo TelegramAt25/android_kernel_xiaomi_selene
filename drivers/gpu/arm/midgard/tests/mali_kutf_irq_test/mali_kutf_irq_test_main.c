@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2016-2018, 2020-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2016-2018, 2020-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -26,6 +26,7 @@
 #include "mali_kbase.h"
 #include <device/mali_kbase_device.h>
 #include <backend/gpu/mali_kbase_pm_internal.h>
+#include <backend/gpu/mali_kbase_irq_internal.h>
 
 #include <kutf/kutf_suite.h>
 #include <kutf/kutf_utils.h>
@@ -42,7 +43,7 @@
 struct kutf_application *irq_app;
 
 /**
- * struct kutf_irq_fixture data - test fixture used by the test functions.
+ * struct kutf_irq_fixture_data - test fixture used by the test functions.
  * @kbdev:	kbase device for the GPU.
  *
  */
@@ -233,9 +234,11 @@ static void mali_kutf_irq_latency(struct kutf_context *context)
 }
 
 /**
- * Module entry point for this test.
+ * mali_kutf_irq_test_main_init - Module entry point for this test.
+ *
+ * Return: 0 on success, error code otherwise
  */
-int mali_kutf_irq_test_main_init(void)
+static int __init mali_kutf_irq_test_main_init(void)
 {
 	struct kutf_suite *suite;
 
@@ -262,9 +265,9 @@ int mali_kutf_irq_test_main_init(void)
 }
 
 /**
- * Module exit point for this test.
+ * mali_kutf_irq_test_main_exit - Module exit point for this test.
  */
-void mali_kutf_irq_test_main_exit(void)
+static void __exit mali_kutf_irq_test_main_exit(void)
 {
 	kutf_destroy_application(irq_app);
 }

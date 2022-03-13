@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2012-2017, 2019-2021 ARM Limited. All rights reserved.
@@ -22,7 +22,7 @@
 #include <mali_kbase.h>
 #include <device/mali_kbase_device.h>
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 
 #ifdef ENABLE_MTK_MEMINFO
 #include <platform/mtk_platform_common.h>
@@ -74,8 +74,8 @@ static int kbasep_gpu_memory_seq_show(struct seq_file *sfile, void *data)
 
 		list_for_each_entry(kctx, &kbdev->kctx_list, kctx_list_link) {
 			/* output the memory usage and cap for each kctx
-			* opened on this device
-			*/
+			 * opened on this device
+			 */
 			seq_printf(sfile, "  %s-0x%pK %10u %10u\n",
 				"kctx",
 				kctx,
@@ -115,18 +115,13 @@ static const struct file_operations kbasep_gpu_memory_debugfs_fops = {
  */
 void kbasep_gpu_memory_debugfs_init(struct kbase_device *kbdev)
 {
-	debugfs_create_file("gpu_memory", S_IRUGO,
+	debugfs_create_file("gpu_memory", 0444,
 			kbdev->mali_debugfs_directory, NULL,
 			&kbasep_gpu_memory_debugfs_fops);
-	return;
 }
-
 #else
 /*
  * Stub functions for when debugfs is disabled
  */
-void kbasep_gpu_memory_debugfs_init(struct kbase_device *kbdev)
-{
-	return;
-}
+void kbasep_gpu_memory_debugfs_init(struct kbase_device *kbdev) {}
 #endif

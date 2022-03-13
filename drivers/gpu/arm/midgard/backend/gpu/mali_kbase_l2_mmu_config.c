@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2019-2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -26,7 +26,7 @@
 #include "mali_kbase_l2_mmu_config.h"
 
 /**
- * struct l2_mmu_config_limit_region
+ * struct l2_mmu_config_limit_region - L2 MMU limit field
  *
  * @value:    The default value to load into the L2_MMU_CONFIG register
  * @mask:     The shifted mask of the field in the L2_MMU_CONFIG register
@@ -39,7 +39,7 @@ struct l2_mmu_config_limit_region {
 };
 
 /**
- * struct l2_mmu_config_limit
+ * struct l2_mmu_config_limit - L2 MMU read and write limit
  *
  * @product_model:    The GPU for which this entry applies
  * @read:             Values for the read limit field
@@ -121,9 +121,9 @@ int kbase_set_mmu_quirks(struct kbase_device *kbdev)
 
 	if (kbdev->system_coherency == COHERENCY_ACE) {
 		/* Allow memory configuration disparity to be ignored,
-		* we optimize the use of shared memory and thus we
-		* expect some disparity in the memory configuration.
-		*/
+		 * we optimize the use of shared memory and thus we
+		 * expect some disparity in the memory configuration.
+		 */
 		kbdev->hw_quirks_mmu |= L2_MMU_CONFIG_ALLOW_SNOOP_DISPARITY;
 	}
 

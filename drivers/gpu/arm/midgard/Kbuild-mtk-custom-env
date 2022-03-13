@@ -1,4 +1,4 @@
-$(info mali MTK evironment, building r19p0 DDK)
+$(info mali MTK evironment, building r36p0 DDK)
 
 MTK_TOP = $(srctree)/drivers/misc/mediatek/
 
@@ -13,6 +13,7 @@ $(info mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY := $(CONFIG_MALI_PLATFORM_THIR
 $(info mtk-Kbuild CONFIG_MALI_PLATFORM_THIRDPARTY_NAME := $(CONFIG_MALI_PLATFORM_THIRDPARTY_NAME))
 
 CONFIG_MALI_DEBUG := y
+CONFIG_GPU_TRACEPOINTS := y
 
 ccflags-y += -I-I$(srctree)/include
 ccflags-y += -I$(srctree)/drivers/staging/android

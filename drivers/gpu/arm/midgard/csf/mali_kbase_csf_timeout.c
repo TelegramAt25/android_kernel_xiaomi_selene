@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2019-2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -100,7 +100,7 @@ static ssize_t progress_timeout_store(struct device * const dev,
 	if (!err) {
 		kbase_csf_scheduler_pm_active(kbdev);
 
-		err = kbase_pm_wait_for_desired_state(kbdev);
+		err = kbase_csf_scheduler_wait_mcu_active(kbdev);
 		if (!err)
 			err = kbase_csf_firmware_set_timeout(kbdev, timeout);
 
@@ -139,15 +139,14 @@ static ssize_t progress_timeout_show(struct device * const dev,
 
 }
 
-static DEVICE_ATTR(progress_timeout, 0644, progress_timeout_show,
-	progress_timeout_store);
+static DEVICE_ATTR_RW(progress_timeout);
 
 int kbase_csf_timeout_init(struct kbase_device *const kbdev)
 {
 	u64 timeout = DEFAULT_PROGRESS_TIMEOUT;
 	int err;
 
-#ifdef CONFIG_OF
+#if IS_ENABLED(CONFIG_OF)
 	err = of_property_read_u64(kbdev->dev->of_node,
 		"progress_timeout", &timeout);
 	if (!err)

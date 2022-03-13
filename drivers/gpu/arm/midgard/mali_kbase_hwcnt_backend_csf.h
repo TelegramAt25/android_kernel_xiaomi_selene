@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
  * (C) COPYRIGHT 2021 ARM Limited. All rights reserved.
@@ -19,7 +19,7 @@
  *
  */
 
-/**
+/*
  * Concrete implementation of mali_kbase_hwcnt_backend interface for CSF
  * backend.
  */
@@ -29,6 +29,7 @@
 
 #include "mali_kbase_hwcnt_backend.h"
 #include "mali_kbase_hwcnt_backend_csf_if.h"
+#include "mali_kbase_hwcnt_watchdog_if.h"
 
 /**
  * kbase_hwcnt_backend_csf_create() - Create a CSF hardware counter backend
@@ -37,6 +38,8 @@
  *                used to create backend interface.
  * @ring_buf_cnt: The buffer count of CSF hwcnt backend, used when allocate ring
  *                buffer, MUST be power of 2.
+ * @watchdog_if:  Non-NULL pointer to a hwcnt watchdog interface structure used
+ *                to create backend interface.
  * @iface:        Non-NULL pointer to backend interface structure that is filled
  *                in on creation success.
  *
@@ -44,9 +47,10 @@
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_backend_csf_create(struct kbase_hwcnt_backend_csf_if *csf_if,
-				   u32 ring_buf_cnt,
-				   struct kbase_hwcnt_backend_interface *iface);
+int kbase_hwcnt_backend_csf_create(
+	struct kbase_hwcnt_backend_csf_if *csf_if, u32 ring_buf_cnt,
+	struct kbase_hwcnt_watchdog_interface *watchdog_if,
+	struct kbase_hwcnt_backend_interface *iface);
 
 /**
  * kbase_hwcnt_backend_csf_metadata_init() - Initialize the metadata for a CSF

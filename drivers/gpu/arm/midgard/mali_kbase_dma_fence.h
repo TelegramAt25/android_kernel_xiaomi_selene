@@ -1,7 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2010-2016, 2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2016, 2020-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -25,7 +25,12 @@
 #ifdef CONFIG_MALI_DMA_FENCE
 
 #include <linux/list.h>
+#include <linux/version.h>
+#if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
 #include <linux/reservation.h>
+#else
+#include <linux/dma-resv.h>
+#endif
 #include <mali_kbase_fence.h>
 
 /* Forward declaration from mali_kbase_defs.h */
@@ -127,6 +132,8 @@ void kbase_dma_fence_term(struct kbase_context *kctx);
 /**
  * kbase_dma_fence_init() - Initialize Mali dma-fence context
  * @kctx: kbase context to initialize
+ *
+ * Return: 0 on success, error code otherwise.
  */
 int kbase_dma_fence_init(struct kbase_context *kctx);
 

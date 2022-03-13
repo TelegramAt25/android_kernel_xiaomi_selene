@@ -1,7 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2020-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -63,6 +63,8 @@ void kbasep_ktrace_backend_format_msg(struct kbase_ktrace_msg *trace_msg,
  * @ktrace: kbase device's ktrace
  *
  * This may also empty the oldest entry in the ringbuffer to make space.
+ *
+ * Return: ktrace message
  */
 struct kbase_ktrace_msg *kbasep_ktrace_reserve(struct kbase_ktrace *ktrace);
 

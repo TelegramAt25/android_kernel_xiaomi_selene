@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2011-2016, 2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2011-2016, 2020-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -27,7 +27,7 @@
 #include <linux/list.h>
 #include <linux/lockdep.h>
 #include <linux/mutex.h>
-#include <linux/reservation.h>
+#include <linux/version.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
@@ -161,7 +161,7 @@ kbase_dma_fence_cancel_atom(struct kbase_jd_atom *katom)
 	if (katom->status == KBASE_JD_ATOM_STATE_QUEUED) {
 		/* Wait was cancelled - zap the atom */
 		katom->event_code = BASE_JD_EVENT_JOB_CANCELLED;
-		if (jd_done_nolock(katom, NULL))
+		if (jd_done_nolock(katom, true))
 			kbase_js_sched_all(katom->kctx->kbdev);
 	}
 }
@@ -196,7 +196,7 @@ kbase_dma_fence_work(struct work_struct *pwork)
 	 * dependency. Run jd_done_nolock() on the katom if it is completed.
 	 */
 	if (unlikely(katom->status == KBASE_JD_ATOM_STATE_COMPLETED))
-		jd_done_nolock(katom, NULL);
+		jd_done_nolock(katom, true);
 	else
 		kbase_jd_dep_clear_locked(katom);
 
@@ -247,7 +247,14 @@ kbase_dma_fence_add_reservation_callback(struct kbase_jd_atom *katom,
 	unsigned int shared_count = 0;
 	int err, i;
 
-	err = reservation_object_get_fences_rcu(resv,
+#if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
+	err = reservation_object_get_fences_rcu(
+#elif (KERNEL_VERSION(5, 14, 0) > LINUX_VERSION_CODE)
+	err = dma_resv_get_fences_rcu(
+#else
+	err = dma_resv_get_fences(
+#endif
+						resv,
 						&excl_fence,
 						&shared_count,
 						&shared_fences);
@@ -365,7 +372,11 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 		struct dma_resv *obj = info->resv_objs[i];
 #endif
 		if (!test_bit(i, info->dma_fence_excl_bitmap)) {
+#if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
 			err = reservation_object_reserve_shared(obj);
+#else
+			err = dma_resv_reserve_shared(obj, 0);
+#endif
 			if (err) {
 				dev_err(katom->kctx->kbdev->dev,
 					"Error %d reserving space for shared fence.\n", err);
@@ -379,7 +390,11 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 				goto end;
 			}
 
+#if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
 			reservation_object_add_shared_fence(obj, fence);
+#else
+			dma_resv_add_shared_fence(obj, fence);
+#endif
 		} else {
 			err = kbase_dma_fence_add_reservation_callback(katom, obj, true);
 			if (err) {
@@ -388,7 +403,11 @@ int kbase_dma_fence_wait(struct kbase_jd_atom *katom,
 				goto end;
 			}
 
+#if (KERNEL_VERSION(5, 4, 0) > LINUX_VERSION_CODE)
 			reservation_object_add_excl_fence(obj, fence);
+#else
+			dma_resv_add_excl_fence(obj, fence);
+#endif
 		}
 	}
 

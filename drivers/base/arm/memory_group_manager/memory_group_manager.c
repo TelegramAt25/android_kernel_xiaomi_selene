@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
@@ -25,7 +25,7 @@
 #include <linux/platform_device.h>
 #include <linux/version.h>
 #include <linux/module.h>
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 #include <linux/debugfs.h>
 #endif
 #include <linux/mm.h>
@@ -91,12 +91,12 @@ struct mgm_group {
 struct mgm_groups {
 	struct mgm_group groups[MEMORY_GROUP_MANAGER_NR_GROUPS];
 	struct device *dev;
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	struct dentry *mgm_debugfs_root;
 #endif
 };
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 
 static int mgm_size_get(void *data, u64 *val)
 {
@@ -160,7 +160,7 @@ static int mgm_initialize_debugfs(struct mgm_groups *mgm_data)
 	 */
 	mgm_data->mgm_debugfs_root =
 		debugfs_create_dir("physical-memory-group-manager", NULL);
-	if (IS_ERR(mgm_data->mgm_debugfs_root)) {
+	if (IS_ERR_OR_NULL(mgm_data->mgm_debugfs_root)) {
 		dev_err(mgm_data->dev, "fail to create debugfs root directory\n");
 		return -ENODEV;
 	}
@@ -173,21 +173,21 @@ static int mgm_initialize_debugfs(struct mgm_groups *mgm_data)
 				"group_%d", i);
 		g = debugfs_create_dir(debugfs_group_name,
 				mgm_data->mgm_debugfs_root);
-		if (IS_ERR(g)) {
+		if (IS_ERR_OR_NULL(g)) {
 			dev_err(mgm_data->dev, "fail to create group[%d]\n", i);
 			goto remove_debugfs;
 		}
 
 		e = debugfs_create_file("size", 0444, g, &mgm_data->groups[i],
 				&fops_mgm_size);
-		if (IS_ERR(e)) {
+		if (IS_ERR_OR_NULL(e)) {
 			dev_err(mgm_data->dev, "fail to create size[%d]\n", i);
 			goto remove_debugfs;
 		}
 
 		e = debugfs_create_file("lp_size", 0444, g,
 				&mgm_data->groups[i], &fops_mgm_lp_size);
-		if (IS_ERR(e)) {
+		if (IS_ERR_OR_NULL(e)) {
 			dev_err(mgm_data->dev,
 				"fail to create lp_size[%d]\n", i);
 			goto remove_debugfs;
@@ -195,7 +195,7 @@ static int mgm_initialize_debugfs(struct mgm_groups *mgm_data)
 
 		e = debugfs_create_file("insert_pfn", 0444, g,
 				&mgm_data->groups[i], &fops_mgm_insert_pfn);
-		if (IS_ERR(e)) {
+		if (IS_ERR_OR_NULL(e)) {
 			dev_err(mgm_data->dev,
 				"fail to create insert_pfn[%d]\n", i);
 			goto remove_debugfs;
@@ -203,7 +203,7 @@ static int mgm_initialize_debugfs(struct mgm_groups *mgm_data)
 
 		e = debugfs_create_file("update_gpu_pte", 0444, g,
 				&mgm_data->groups[i], &fops_mgm_update_gpu_pte);
-		if (IS_ERR(e)) {
+		if (IS_ERR_OR_NULL(e)) {
 			dev_err(mgm_data->dev,
 				"fail to create update_gpu_pte[%d]\n", i);
 			goto remove_debugfs;
@@ -361,7 +361,7 @@ static vm_fault_t example_mgm_vmf_insert_pfn_prot(
 	dev_dbg(data->dev,
 		"%s(mgm_dev=%p, group_id=%d, vma=%p, addr=0x%lx, pfn=0x%lx, prot=0x%llx)\n",
 		__func__, (void *)mgm_dev, group_id, (void *)vma, addr, pfn,
-		(unsigned long long int) pgprot_val(prot));
+		(unsigned long long) pgprot_val(prot));
 
 	if (WARN_ON(group_id < 0) ||
 		WARN_ON(group_id >= MEMORY_GROUP_MANAGER_NR_GROUPS))

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2010-2021 ARM Limited. All rights reserved.
@@ -33,29 +33,35 @@
 #include <csf/mali_kbase_csf_firmware.h>
 #endif
 
+#include <linux/of.h>
+
 static const struct kbase_pm_policy *const all_policy_list[] = {
-#ifdef CONFIG_MALI_NO_MALI
+#if IS_ENABLED(CONFIG_MALI_NO_MALI)
 	&kbase_pm_always_on_policy_ops,
 	&kbase_pm_coarse_demand_policy_ops,
-#if !MALI_CUSTOMER_RELEASE
-	&kbase_pm_always_on_demand_policy_ops,
-#endif
-#else				/* CONFIG_MALI_NO_MALI */
+#else /* CONFIG_MALI_NO_MALI */
 	&kbase_pm_coarse_demand_policy_ops,
-#if !MALI_CUSTOMER_RELEASE
-	&kbase_pm_always_on_demand_policy_ops,
-#endif
-	&kbase_pm_always_on_policy_ops
+	&kbase_pm_always_on_policy_ops,
 #endif /* CONFIG_MALI_NO_MALI */
 };
 
-#if MALI_USE_CSF
 void kbase_pm_policy_init(struct kbase_device *kbdev)
 {
-	unsigned long flags;
 	const struct kbase_pm_policy *default_policy = all_policy_list[0];
+	struct device_node *np = kbdev->dev->of_node;
+	const char *power_policy_name;
+	unsigned long flags;
+	int i;
 
-#if defined CONFIG_MALI_DEBUG
+	if (of_property_read_string(np, "power_policy", &power_policy_name) == 0) {
+		for (i = 0; i < ARRAY_SIZE(all_policy_list); i++)
+			if (sysfs_streq(all_policy_list[i]->name, power_policy_name)) {
+				default_policy = all_policy_list[i];
+				break;
+			}
+	}
+
+#if MALI_USE_CSF && defined(CONFIG_MALI_DEBUG)
 	/* Use always_on policy if module param fw_debug=1 is
 	 * passed, to aid firmware debugging.
 	 */
@@ -63,31 +69,18 @@ void kbase_pm_policy_init(struct kbase_device *kbdev)
 		default_policy = &kbase_pm_always_on_policy_ops;
 #endif
 
-
 	default_policy->init(kbdev);
 
+#if MALI_USE_CSF
 	spin_lock_irqsave(&kbdev->hwaccess_lock, flags);
 	kbdev->pm.backend.pm_current_policy = default_policy;
-	kbdev->pm.backend.csf_pm_sched_flags =
-				default_policy->pm_sched_flags;
+	kbdev->pm.backend.csf_pm_sched_flags = default_policy->pm_sched_flags;
 	spin_unlock_irqrestore(&kbdev->hwaccess_lock, flags);
-}
-#else /* MALI_USE_CSF */
-void kbase_pm_policy_init(struct kbase_device *kbdev)
-{
-	kbdev->pm.backend.pm_current_policy = all_policy_list[0];
-
-#if MALI_USE_CSF && defined CONFIG_MALI_DEBUG
-	/* Use always_on policy if module param fw_debug=1 is
-	 * passed, to aid firmware debugging.
-	 */
-	if (fw_debug)
-		kbdev->pm.backend.pm_current_policy =
-			&kbase_pm_always_on_policy_ops;
+#else
+	CSTD_UNUSED(flags);
+	kbdev->pm.backend.pm_current_policy = default_policy;
 #endif
-	kbdev->pm.backend.pm_current_policy->init(kbdev);
 }
-#endif /* MALI_USE_CSF */
 
 void kbase_pm_policy_term(struct kbase_device *kbdev)
 {
@@ -187,15 +180,14 @@ void kbase_pm_update_dynamic_cores_onoff(struct kbase_device *kbdev)
 
 	shaders_desired = kbdev->pm.backend.pm_current_policy->shaders_needed(kbdev);
 
-	if (shaders_desired && kbase_pm_is_l2_desired(kbdev)) {
+	if (shaders_desired && kbase_pm_is_l2_desired(kbdev))
 		kbase_pm_update_state(kbdev);
-	}
 #endif
 }
 
 void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 {
-	bool shaders_desired;
+	bool shaders_desired = false;
 
 	lockdep_assert_held(&kbdev->hwaccess_lock);
 
@@ -204,6 +196,7 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 	if (kbdev->pm.backend.poweroff_wait_in_progress)
 		return;
 
+#if !MALI_USE_CSF
 	if (kbdev->pm.backend.protected_transition_override)
 		/* We are trying to change in/out of protected mode - force all
 		 * cores off so that the L2 powers down
@@ -211,15 +204,8 @@ void kbase_pm_update_cores_state_nolock(struct kbase_device *kbdev)
 		shaders_desired = false;
 	else
 		shaders_desired = kbdev->pm.backend.pm_current_policy->shaders_needed(kbdev);
-
-#if MALI_USE_CSF
-	/* On CSF GPUs, Host driver isn't supposed to do the power management
-	 * for shader cores. CSF firmware will power up the cores appropriately
-	 * and so from Driver's standpoint 'shaders_desired' flag shall always
-	 * remain 0.
-	 */
-	shaders_desired = false;
 #endif
+
 	if (kbdev->pm.backend.shaders_desired != shaders_desired) {
 		KBASE_KTRACE_ADD(kbdev, PM_CORES_CHANGE_DESIRED, NULL, kbdev->pm.backend.shaders_desired);
 
@@ -262,9 +248,8 @@ KBASE_EXPORT_TEST_API(kbase_pm_get_policy);
 #if MALI_USE_CSF
 static int policy_change_wait_for_L2_off(struct kbase_device *kbdev)
 {
-#define WAIT_DURATION_MS (3000)
 	long remaining;
-	long timeout = kbase_csf_timeout_in_jiffies(WAIT_DURATION_MS);
+	long timeout = kbase_csf_timeout_in_jiffies(kbase_get_timeout_ms(kbdev, CSF_PM_TIMEOUT));
 	int err = 0;
 
 	/* Wait for L2 becoming off, by which the MCU is also implicitly off
@@ -372,6 +357,9 @@ void kbase_pm_set_policy(struct kbase_device *kbdev,
 	KBASE_KTRACE_ADD(kbdev, PM_CURRENT_POLICY_TERM, NULL, old_policy->id);
 	if (old_policy->term)
 		old_policy->term(kbdev);
+
+	memset(&kbdev->pm.backend.pm_policy_data, 0,
+	       sizeof(union kbase_pm_policy_data));
 
 	KBASE_KTRACE_ADD(kbdev, PM_CURRENT_POLICY_INIT, NULL, new_policy->id);
 	if (new_policy->init)

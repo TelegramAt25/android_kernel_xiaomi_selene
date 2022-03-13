@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2017, 2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2017, 2020-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -368,7 +368,7 @@ int kutf_helper_receive_named_val(
 		named_val->u.val_str = strval;
 		break;
 	default:
-		pr_err("Unreachable, fix kutf_helper_receive_named_val\n");
+		pr_err("Unreachable, fix %s\n", __func__);
 		/* Coding error, report as though 'run' file failed */
 		return -EINVAL;
 	}

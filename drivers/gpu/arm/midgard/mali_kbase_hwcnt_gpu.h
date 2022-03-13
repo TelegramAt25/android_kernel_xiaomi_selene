@@ -1,4 +1,4 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
  * (C) COPYRIGHT 2018, 2020-2021 ARM Limited. All rights reserved.
@@ -29,13 +29,24 @@ struct kbase_hwcnt_metadata;
 struct kbase_hwcnt_enable_map;
 struct kbase_hwcnt_dump_buffer;
 
+/* Hardware counter version 5 definitions, V5 is the only supported version. */
 #define KBASE_HWCNT_V5_BLOCK_TYPE_COUNT 4
 #define KBASE_HWCNT_V5_HEADERS_PER_BLOCK 4
-#define KBASE_HWCNT_V5_COUNTERS_PER_BLOCK 60
-#define KBASE_HWCNT_V5_VALUES_PER_BLOCK                                        \
-	(KBASE_HWCNT_V5_HEADERS_PER_BLOCK + KBASE_HWCNT_V5_COUNTERS_PER_BLOCK)
-/** Index of the PRFCNT_EN header into a V5 counter block */
+#define KBASE_HWCNT_V5_DEFAULT_COUNTERS_PER_BLOCK 60
+#define KBASE_HWCNT_V5_DEFAULT_VALUES_PER_BLOCK                                \
+	(KBASE_HWCNT_V5_HEADERS_PER_BLOCK +                                    \
+	 KBASE_HWCNT_V5_DEFAULT_COUNTERS_PER_BLOCK)
+
+/* FrontEnd block count in V5 GPU hardware counter. */
+#define KBASE_HWCNT_V5_FE_BLOCK_COUNT 1
+/* Tiler block count in V5 GPU hardware counter. */
+#define KBASE_HWCNT_V5_TILER_BLOCK_COUNT 1
+
+/* Index of the PRFCNT_EN header into a V5 counter block */
 #define KBASE_HWCNT_V5_PRFCNT_EN_HEADER 2
+
+/* Number of bytes for each counter value in hardware. */
+#define KBASE_HWCNT_VALUE_HW_BYTES (sizeof(u32))
 
 /**
  * enum kbase_hwcnt_gpu_group_type - GPU hardware counter group types, used to
@@ -83,11 +94,13 @@ enum kbase_hwcnt_gpu_v5_block_type {
  * @KBASE_HWCNT_SET_PRIMARY:   The Primary set of counters
  * @KBASE_HWCNT_SET_SECONDARY: The Secondary set of counters
  * @KBASE_HWCNT_SET_TERTIARY:  The Tertiary set of counters
+ * @KBASE_HWCNT_SET_UNDEFINED: Undefined set of counters
  */
 enum kbase_hwcnt_set {
 	KBASE_HWCNT_SET_PRIMARY,
 	KBASE_HWCNT_SET_SECONDARY,
 	KBASE_HWCNT_SET_TERTIARY,
+	KBASE_HWCNT_SET_UNDEFINED = 255,
 };
 
 /**
@@ -117,14 +130,17 @@ enum kbase_hwcnt_physical_set {
 
 /**
  * struct kbase_hwcnt_gpu_info - Information about hwcnt blocks on the GPUs.
- * @l2_count:   L2 cache count.
- * @core_mask:  Shader core mask. May be sparse.
- * @clk_cnt:    Number of clock domains available.
+ * @l2_count:                L2 cache count.
+ * @core_mask:               Shader core mask. May be sparse.
+ * @clk_cnt:                 Number of clock domains available.
+ * @prfcnt_values_per_block: Total entries (header + counters) of performance
+ *                           counter per block.
  */
 struct kbase_hwcnt_gpu_info {
 	size_t l2_count;
 	u64 core_mask;
 	u8 clk_cnt;
+	size_t prfcnt_values_per_block;
 };
 
 /**
@@ -224,16 +240,16 @@ void kbase_hwcnt_csf_metadata_destroy(
  * kbase_hwcnt_jm_dump_get() - Copy or accumulate enabled counters from the raw
  *                             dump buffer in src into the dump buffer
  *                             abstraction in dst.
- * @dst:            Non-NULL pointer to dst dump buffer.
- * @src:            Non-NULL pointer to src raw dump buffer, of same length
- *                  as returned in out_dump_bytes parameter of
- *                  kbase_hwcnt_jm_metadata_create.
+ * @dst:            Non-NULL pointer to destination dump buffer.
+ * @src:            Non-NULL pointer to source raw dump buffer, of same length
+ *                  as dump_buf_bytes in the metadata of destination dump
+ *                  buffer.
  * @dst_enable_map: Non-NULL pointer to enable map specifying enabled values.
  * @pm_core_mask:   PM state synchronized shaders core mask with the dump.
  * @curr_config:    Current allocated hardware resources to correctly map the
- *                  src raw dump buffer to the dst dump buffer.
- * @accumulate:     True if counters in src should be accumulated into dst,
- *                  rather than copied.
+ *                  source raw dump buffer to the destination dump buffer.
+ * @accumulate:     True if counters in source should be accumulated into
+ *                  destination, rather than copied.
  *
  * The dst and dst_enable_map MUST have been created from the same metadata as
  * returned from the call to kbase_hwcnt_jm_metadata_create as was used to get
@@ -241,7 +257,7 @@ void kbase_hwcnt_csf_metadata_destroy(
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, void *src,
+int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 			    const struct kbase_hwcnt_enable_map *dst_enable_map,
 			    const u64 pm_core_mask,
 			    const struct kbase_hwcnt_curr_config *curr_config,
@@ -251,13 +267,12 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, void *src,
  * kbase_hwcnt_csf_dump_get() - Copy or accumulate enabled counters from the raw
  *                              dump buffer in src into the dump buffer
  *                              abstraction in dst.
- * @dst:            Non-NULL pointer to dst dump buffer.
- * @src:            Non-NULL pointer to src raw dump buffer, of same length
- *                  as returned in out_dump_bytes parameter of
- *                  kbase_hwcnt_csf_metadata_create.
+ * @dst:            Non-NULL pointer to destination dump buffer.
+ * @src:            Non-NULL pointer to source raw dump buffer, of same length
+ *                  as dump_buf_bytes in the metadata of dst dump buffer.
  * @dst_enable_map: Non-NULL pointer to enable map specifying enabled values.
- * @accumulate:     True if counters in src should be accumulated into dst,
- *                  rather than copied.
+ * @accumulate:     True if counters in src should be accumulated into
+ *                  destination, rather than copied.
  *
  * The dst and dst_enable_map MUST have been created from the same metadata as
  * returned from the call to kbase_hwcnt_csf_metadata_create as was used to get
@@ -265,15 +280,54 @@ int kbase_hwcnt_jm_dump_get(struct kbase_hwcnt_dump_buffer *dst, void *src,
  *
  * Return: 0 on success, else error code.
  */
-int kbase_hwcnt_csf_dump_get(struct kbase_hwcnt_dump_buffer *dst, void *src,
+int kbase_hwcnt_csf_dump_get(struct kbase_hwcnt_dump_buffer *dst, u64 *src,
 			     const struct kbase_hwcnt_enable_map *dst_enable_map,
 			     bool accumulate);
 
 /**
+ * kbase_hwcnt_backend_gpu_block_map_to_physical() - Convert from a block
+ *                                                   enable map abstraction to
+ *                                                   a physical block enable
+ *                                                   map.
+ * @lo: Low 64 bits of block enable map abstraction.
+ * @hi: High 64 bits of block enable map abstraction.
+ *
+ * The abstraction uses 128 bits to enable 128 block values, whereas the
+ * physical uses just 32 bits, as bit n enables values [n*4, n*4+3].
+ * Therefore, this conversion is lossy.
+ *
+ * Return: 32-bit physical block enable map.
+ */
+static inline u32 kbase_hwcnt_backend_gpu_block_map_to_physical(u64 lo, u64 hi)
+{
+	u32 phys = 0;
+	u64 dwords[2] = { lo, hi };
+	size_t dword_idx;
+
+	for (dword_idx = 0; dword_idx < 2; dword_idx++) {
+		const u64 dword = dwords[dword_idx];
+		u16 packed = 0;
+
+		size_t hword_bit;
+
+		for (hword_bit = 0; hword_bit < 16; hword_bit++) {
+			const size_t dword_bit = hword_bit * 4;
+			const u16 mask = ((dword >> (dword_bit + 0)) & 0x1) |
+					 ((dword >> (dword_bit + 1)) & 0x1) |
+					 ((dword >> (dword_bit + 2)) & 0x1) |
+					 ((dword >> (dword_bit + 3)) & 0x1);
+			packed |= (mask << hword_bit);
+		}
+		phys |= ((u32)packed) << (16 * dword_idx);
+	}
+	return phys;
+}
+
+/**
  * kbase_hwcnt_gpu_enable_map_to_physical() - Convert an enable map abstraction
  *                                            into a physical enable map.
- * @dst: Non-NULL pointer to dst physical enable map.
- * @src: Non-NULL pointer to src enable map abstraction.
+ * @dst: Non-NULL pointer to destination physical enable map.
+ * @src: Non-NULL pointer to source enable map abstraction.
  *
  * The src must have been created from a metadata returned from a call to
  * kbase_hwcnt_jm_metadata_create or kbase_hwcnt_csf_metadata_create.
@@ -290,8 +344,8 @@ void kbase_hwcnt_gpu_enable_map_to_physical(
  * kbase_hwcnt_gpu_set_to_physical() - Map counter set selection to physical
  *                                     SET_SELECT value.
  *
- * @dst: Non-NULL pointer to dst physical SET_SELECT value.
- * @src: Non-NULL pointer to src counter set selection.
+ * @dst: Non-NULL pointer to destination physical SET_SELECT value.
+ * @src: Non-NULL pointer to source counter set selection.
  */
 void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst,
 				     enum kbase_hwcnt_set src);
@@ -299,8 +353,8 @@ void kbase_hwcnt_gpu_set_to_physical(enum kbase_hwcnt_physical_set *dst,
 /**
  * kbase_hwcnt_gpu_enable_map_from_physical() - Convert a physical enable map to
  *                                              an enable map abstraction.
- * @dst: Non-NULL pointer to dst enable map abstraction.
- * @src: Non-NULL pointer to src physical enable map.
+ * @dst: Non-NULL pointer to destination enable map abstraction.
+ * @src: Non-NULL pointer to source physical enable map.
  *
  * The dst must have been created from a metadata returned from a call to
  * kbase_hwcnt_jm_metadata_create or kbase_hwcnt_csf_metadata_create.

@@ -1,7 +1,7 @@
-/* SPDX-License-Identifier: GPL-2.0 */
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
  *
- * (C) COPYRIGHT 2014, 2019-2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2014, 2019-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -55,6 +55,7 @@ void kbase_devfreq_enqueue_work(struct kbase_device *kbdev,
  * This function will only perform translation if an operating-points-v2-mali
  * table is present in devicetree. If one is not present then it will return an
  * untranslated frequency (and corresponding voltage) and all cores enabled.
+ * The voltages returned are in micro Volts (uV).
  */
 void kbase_devfreq_opp_translate(struct kbase_device *kbdev, unsigned long freq,
 	u64 *core_mask, unsigned long *freqs, unsigned long *volts);

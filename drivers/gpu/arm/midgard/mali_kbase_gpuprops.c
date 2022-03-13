@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2011-2021 ARM Limited. All rights reserved.
@@ -30,7 +30,7 @@
 #include <mali_kbase_config_defaults.h>
 #include <uapi/gpu/arm/midgard/mali_kbase_ioctl.h>
 #include <linux/clk.h>
-#include <mali_kbase_pm_internal.h>
+#include <backend/gpu/mali_kbase_pm_internal.h>
 #include <linux/of_platform.h>
 #include <linux/moduleparam.h>
 
@@ -371,6 +371,7 @@ static void kbase_gpuprops_calculate_props(
 	gpu_id = kbdev->gpu_props.props.raw_props.gpu_id;
 
 #if MALI_USE_CSF
+	CSTD_UNUSED(gpu_id);
 	gpu_props->thread_props.max_registers =
 		KBASE_UBFX32(gpu_props->raw_props.thread_features,
 			     0U, 22);
@@ -531,6 +532,14 @@ static int num_override_l2_hash_values;
 module_param_array(l2_hash_values, uint, &num_override_l2_hash_values, 0000);
 MODULE_PARM_DESC(l2_hash_values, "Override L2 hash values config for testing");
 
+/* Definitions for range of supported user defined hash functions for GPUs
+ * that support L2_CONFIG and not ASN_HASH features. Supported hash function
+ * range from 0b1000-0b1111 inclusive. Selection of any other values will
+ * lead to undefined behavior.
+ */
+#define USER_DEFINED_HASH_LO ((u8)0x08)
+#define USER_DEFINED_HASH_HI ((u8)0x0F)
+
 enum l2_config_override_result {
 	L2_CONFIG_OVERRIDE_FAIL = -1,
 	L2_CONFIG_OVERRIDE_NONE,
@@ -562,7 +571,11 @@ kbase_read_l2_config_from_dt(struct kbase_device *const kbdev)
 	else if (of_property_read_u8(np, "l2-size", &kbdev->l2_size_override))
 		kbdev->l2_size_override = 0;
 
-	if (override_l2_hash)
+	/* Check overriding value is supported, if not will result in
+	 * undefined behavior.
+	 */
+	if (override_l2_hash >= USER_DEFINED_HASH_LO &&
+	    override_l2_hash <= USER_DEFINED_HASH_HI)
 		kbdev->l2_hash_override = override_l2_hash;
 	else if (of_property_read_u8(np, "l2-hash", &kbdev->l2_hash_override))
 		kbdev->l2_hash_override = 0;
@@ -649,6 +662,19 @@ int kbase_gpuprops_update_l2_features(struct kbase_device *kbdev)
 		dev_info(kbdev->dev, "Reflected L2_CONFIG is 0x%08x\n",
 			 regdump.l2_config);
 
+		if (kbase_hw_has_feature(kbdev, BASE_HW_FEATURE_ASN_HASH)) {
+			int idx;
+			const bool asn_he = regdump.l2_config &
+					    L2_CONFIG_ASN_HASH_ENABLE_MASK;
+			if (!asn_he && kbdev->l2_hash_values_override)
+				dev_err(kbdev->dev,
+					"Failed to use requested ASN_HASH, fallback to default");
+			for (idx = 0; idx < ASN_HASH_COUNT; idx++)
+				dev_info(kbdev->dev,
+					 "%s ASN_HASH[%d] is [0x%08x]\n",
+					 asn_he ? "Overridden" : "Default", idx,
+					 regdump.l2_asn_hash[idx]);
+		}
 
 		/* Update gpuprops with reflected L2_FEATURES */
 		gpu_props->raw_props.l2_features = regdump.l2_features;
@@ -734,8 +760,8 @@ static struct {
 			raw_props.thread_max_workgroup_size),
 	PROP(RAW_THREAD_MAX_BARRIER_SIZE, raw_props.thread_max_barrier_size),
 	PROP(RAW_THREAD_FEATURES,         raw_props.thread_features),
-	PROP(RAW_THREAD_TLS_ALLOC,        raw_props.thread_tls_alloc),
 	PROP(RAW_COHERENCY_MODE,          raw_props.coherency_mode),
+	PROP(RAW_THREAD_TLS_ALLOC,        raw_props.thread_tls_alloc),
 	PROP(RAW_GPU_FEATURES,            raw_props.gpu_features),
 	PROP(COHERENCY_NUM_GROUPS,        coherency_info.num_groups),
 	PROP(COHERENCY_NUM_CORE_GROUPS,   coherency_info.num_core_groups),

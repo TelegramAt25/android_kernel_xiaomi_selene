@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2012-2020 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2012-2021 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -262,7 +262,7 @@ void kbase_sync_fence_in_cancel_wait(struct kbase_jd_atom *katom)
 	kbasep_remove_waiting_soft_job(katom);
 	kbase_finish_soft_job(katom);
 
-	if (jd_done_nolock(katom, NULL))
+	if (jd_done_nolock(katom, true))
 		kbase_js_sched_all(katom->kctx->kbdev);
 }
 

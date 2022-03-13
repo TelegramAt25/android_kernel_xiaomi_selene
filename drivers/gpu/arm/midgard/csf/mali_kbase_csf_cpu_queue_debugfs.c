@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2020-2021 ARM Limited. All rights reserved.
@@ -23,7 +23,7 @@
 #include <mali_kbase.h>
 #include <linux/seq_file.h>
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 
 bool kbase_csf_cpu_queue_read_dump_req(struct kbase_context *kctx,
 					struct base_csf_notification *req)
@@ -54,7 +54,7 @@ static int kbasep_csf_cpu_queue_debugfs_show(struct seq_file *file, void *data)
 	mutex_lock(&kctx->csf.lock);
 	if (atomic_read(&kctx->csf.cpu_queue.dump_req_status) !=
 				BASE_CSF_CPU_QUEUE_DUMP_COMPLETE) {
-		seq_printf(file, "Dump request already started! (try again)\n");
+		seq_puts(file, "Dump request already started! (try again)\n");
 		mutex_unlock(&kctx->csf.lock);
 		return -EBUSY;
 	}
@@ -64,7 +64,8 @@ static int kbasep_csf_cpu_queue_debugfs_show(struct seq_file *file, void *data)
 	kbase_event_wakeup(kctx);
 	mutex_unlock(&kctx->csf.lock);
 
-	seq_printf(file, "CPU Queues table (version:v%u):\n", MALI_CSF_CPU_QUEUE_DEBUGFS_VERSION);
+	seq_puts(file,
+		"CPU Queues table (version:v" __stringify(MALI_CSF_CPU_QUEUE_DEBUGFS_VERSION) "):\n");
 
 	wait_for_completion_timeout(&kctx->csf.cpu_queue.dump_cmp,
 			msecs_to_jiffies(3000));
@@ -79,9 +80,8 @@ static int kbasep_csf_cpu_queue_debugfs_show(struct seq_file *file, void *data)
 		kfree(kctx->csf.cpu_queue.buffer);
 		kctx->csf.cpu_queue.buffer = NULL;
 		kctx->csf.cpu_queue.buffer_size = 0;
-	}
-	else
-		seq_printf(file, "Dump error! (time out)\n");
+	} else
+		seq_puts(file, "Dump error! (time out)\n");
 
 	atomic_set(&kctx->csf.cpu_queue.dump_req_status,
 			BASE_CSF_CPU_QUEUE_DUMP_COMPLETE);

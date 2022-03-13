@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2014-2021 ARM Limited. All rights reserved.
@@ -19,7 +19,7 @@
  *
  */
 
-#ifdef CONFIG_DEBUG_FS
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 
 #include <linux/seq_file.h>
 #include <mali_kbase.h>
@@ -74,8 +74,10 @@ static void kbase_jd_debugfs_fence_info(struct kbase_jd_atom *atom,
 			seq_printf(sfile,
 #if (KERNEL_VERSION(4, 8, 0) > LINUX_VERSION_CODE)
 				   "Sd(%u#%u: %s) ",
-#else
+#elif (KERNEL_VERSION(5, 1, 0) > LINUX_VERSION_CODE)
 				   "Sd(%llu#%u: %s) ",
+#else
+				   "Sd(%llu#%llu: %s) ",
 #endif
 				   fence->context, fence->seqno,
 				   dma_fence_is_signaled(fence) ? "signaled" :
@@ -93,8 +95,10 @@ static void kbase_jd_debugfs_fence_info(struct kbase_jd_atom *atom,
 			seq_printf(sfile,
 #if (KERNEL_VERSION(4, 8, 0) > LINUX_VERSION_CODE)
 				   "Wd(%u#%u: %s) ",
-#else
+#elif (KERNEL_VERSION(5, 1, 0) > LINUX_VERSION_CODE)
 				   "Wd(%llu#%u: %s) ",
+#else
+				   "Wd(%llu#%llu: %s) ",
 #endif
 				   fence->context, fence->seqno,
 				   dma_fence_is_signaled(fence) ? "signaled" :
@@ -113,7 +117,7 @@ static void kbasep_jd_debugfs_atom_deps(
 	int i;
 
 	for (i = 0; i < 2; i++)	{
-		deps[i].id = (unsigned)(atom->dep[i].atom ?
+		deps[i].id = (unsigned int)(atom->dep[i].atom ?
 				kbase_jd_atom_id(kctx, atom->dep[i].atom) : 0);
 
 		switch (atom->dep[i].dep_type) {
@@ -227,9 +231,9 @@ static const struct file_operations kbasep_jd_debugfs_atoms_fops = {
 void kbasep_jd_debugfs_ctx_init(struct kbase_context *kctx)
 {
 #if (KERNEL_VERSION(4, 7, 0) <= LINUX_VERSION_CODE)
-	const mode_t mode = S_IRUGO;
+	const mode_t mode = 0444;
 #else
-	const mode_t mode = S_IRUSR;
+	const mode_t mode = 0400;
 #endif
 
 	/* Caller already ensures this, but we keep the pattern for

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
@@ -28,7 +28,7 @@
 #include <mali_kbase_hwaccess_jm.h>
 #include <device/mali_kbase_device.h>
 #include <mali_kbase_as_fault_debugfs.h>
-#include "../mali_kbase_mmu_internal.h"
+#include <mmu/mali_kbase_mmu_internal.h>
 
 void kbase_mmu_get_as_setup(struct kbase_mmu_table *mmut,
 		struct kbase_mmu_setup * const setup)
@@ -185,6 +185,7 @@ void kbase_mmu_report_fault_and_kill(struct kbase_context *kctx,
 			KBASE_MMU_FAULT_TYPE_PAGE_UNEXPECTED);
 	kbase_mmu_hw_enable_fault(kbdev, as,
 			KBASE_MMU_FAULT_TYPE_PAGE_UNEXPECTED);
+
 }
 
 /**
@@ -240,13 +241,13 @@ static void kbase_mmu_interrupt_process(struct kbase_device *kbdev,
 		 * hw counters dumping in progress, signal the
 		 * other thread that it failed
 		 */
-  		spin_lock_irqsave(&kbdev->hwcnt.lock, flags);
+		spin_lock_irqsave(&kbdev->hwcnt.lock, flags);
 		if ((kbdev->hwcnt.kctx == kctx) &&
 		    (kbdev->hwcnt.backend.state ==
 					KBASE_INSTR_STATE_DUMPING))
-			kbdev->hwcnt.backend.state =
-						KBASE_INSTR_STATE_FAULT;
-  		spin_unlock_irqrestore(&kbdev->hwcnt.lock, flags);
+			kbdev->hwcnt.backend.state = KBASE_INSTR_STATE_FAULT;
+
+		spin_unlock_irqrestore(&kbdev->hwcnt.lock, flags);
 
 		/*
 		 * Stop the kctx from submitting more jobs and cause it
