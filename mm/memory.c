@@ -3037,7 +3037,6 @@ static int do_wp_page(struct vm_fault *vmf)
 	 * Take out anonymous pages first, anonymous shared vmas are
 	 * not dirty accountable.
 	 */
-<<<<<<< HEAD
 	if (PageAnon(vmf->page)) {
 		struct page *page = vmf->page;
 
