@@ -702,7 +702,10 @@ KBUILD_CFLAGS	+= $(call cc-option,-mllvm -polly,) \
 		   $(call cc-option,-mllvm -polly-detect-keep-going,) \
 		   $(call cc-option,-mllvm -polly-vectorizer=stripmine,) \
 		   $(call cc-option,-mllvm -polly-invariant-load-hoisting,)
+
+KBUILD_CFLAGS	+= $(call cc-disable-warning,void-ptr-dereference,)
 endif
+
 
 KBUILD_CFLAGS += $(call cc-ifversion, -gt, 0900, \
 			$(call cc-option, -Wno-psabi) \
