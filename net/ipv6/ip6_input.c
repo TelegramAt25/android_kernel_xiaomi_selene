@@ -57,7 +57,7 @@ int ip6_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 	skb = l3mdev_ip6_rcv(skb);
 	if (!skb)
 		return NET_RX_SUCCESS;
-
+	
 	if (READ_ONCE(net->ipv4.sysctl_ip_early_demux) &&
 	    !skb_dst(skb) && !skb->sk) {
 		switch (ipv6_hdr(skb)->nexthdr) {
@@ -74,17 +74,6 @@ int ip6_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
 
 	if (!skb_valid_dst(skb))
 		ip6_route_input(skb);
-}
-
-int ip6_rcv_finish(struct net *net, struct sock *sk, struct sk_buff *skb)
-{
-	/* if ingress device is enslaved to an L3 master device pass the
-	 * skb to its handler for processing
-	 */
-	skb = l3mdev_ip6_rcv(skb);
-	if (!skb)
-		return NET_RX_SUCCESS;
-	ip6_rcv_finish_core(net, sk, skb);
 
 	return dst_input(skb);
 }
@@ -113,10 +102,6 @@ static void ip6_list_rcv_finish(struct net *net, struct sock *sk,
 		 * skb to its handler for processing
 		 */
 		skb = l3mdev_ip6_rcv(skb);
-		if (!skb)
-			continue;
-		ip6_rcv_finish_core(net, sk, skb);
-		dst = skb_dst(skb);
 		if (curr_dst != dst) {
 			/* dispatch old sublist */
 			if (!list_empty(&sublist))
