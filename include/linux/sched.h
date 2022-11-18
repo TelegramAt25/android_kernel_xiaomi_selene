@@ -107,10 +107,6 @@ struct task_group;
 
 #define task_is_stopped_or_traced(task)	((task->state & (__TASK_STOPPED | __TASK_TRACED)) != 0)
 
-#define task_contributes_to_load(task)	((task->state & TASK_UNINTERRUPTIBLE) != 0 && \
-					 (task->flags & PF_FROZEN) == 0 && \
-					 (task->state & TASK_NOLOAD) == 0)
-
 #ifdef CONFIG_DEBUG_ATOMIC_SLEEP
 
 /*
@@ -1385,6 +1381,12 @@ struct task_struct {
 	short nice_backup;
 	atomic_t inherit_types;
 #endif
+
+	struct {
+		struct work_struct work;
+		atomic_t running;
+		bool free_stack;
+	} async_free;
 
 	/*
 	 * New fields for task_struct should be added above here, so that

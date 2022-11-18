@@ -135,8 +135,10 @@ static int __control_devkmsg(char *str)
 
 static int __init control_devkmsg(char *str)
 {
-	if (__control_devkmsg(str) < 0)
+	if (__control_devkmsg(str) < 0) {
+		pr_warn("printk.devkmsg: bad option string '%s'\n", str);
 		return 1;
+	}
 
 	/*
 	 * Set sysctl string accordingly:
@@ -158,7 +160,7 @@ static int __init control_devkmsg(char *str)
 	 */
 	devkmsg_log |= DEVKMSG_LOG_MASK_LOCK;
 
-	return 0;
+	return 1;
 }
 __setup("printk.devkmsg=", control_devkmsg);
 
@@ -954,6 +956,9 @@ static ssize_t devkmsg_write(struct kiocb *iocb, struct iov_iter *from)
 	struct devkmsg_user *user = file->private_data;
 	size_t len = iov_iter_count(from);
 	ssize_t ret = len;
+
+	/* Don't allow userspace to write to /dev/kmesg */
+	return len;
 
 	if (!user || len > LOG_LINE_MAX)
 		return -EINVAL;
@@ -2475,7 +2480,7 @@ int add_preferred_console(char *name, int idx, char *options)
 	return __add_preferred_console(name, idx, options, NULL);
 }
 
-bool console_suspend_enabled = true;
+bool console_suspend_enabled = false;
 EXPORT_SYMBOL(console_suspend_enabled);
 
 static int __init console_suspend_disable(char *str)
