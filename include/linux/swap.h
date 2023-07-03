@@ -391,6 +391,7 @@ extern void end_swap_bio_write(struct bio *bio);
 extern int __swap_writepage(struct page *page, struct writeback_control *wbc,
 	bio_end_io_t end_write_func);
 extern int swap_set_page_dirty(struct page *page);
+extern bool swap_slot_has_sync_io(swp_entry_t entry);
 
 int add_swap_extent(struct swap_info_struct *sis, unsigned long start_page,
 		unsigned long nr_pages, sector_t start_block);
@@ -472,9 +473,11 @@ extern unsigned int count_swap_pages(int, int);
 extern sector_t map_swap_page(struct page *, struct block_device **);
 extern sector_t swapdev_block(int, pgoff_t);
 extern int page_swapcount(struct page *);
+extern int __swap_count(struct swap_info_struct *si, swp_entry_t entry);
 extern int __swp_swapcount(swp_entry_t entry);
 extern int swp_swapcount(swp_entry_t entry);
 extern struct swap_info_struct *page_swap_info(struct page *);
+extern struct swap_info_struct *swp_swap_info(swp_entry_t entry);
 extern bool reuse_swap_page(struct page *, int *);
 extern int try_to_free_swap(struct page *);
 struct backing_dev_info;
@@ -482,6 +485,16 @@ extern int init_swap_address_space(unsigned int type, unsigned long nr_pages);
 extern void exit_swap_address_space(unsigned int type);
 
 #else /* CONFIG_SWAP */
+
+static inline int swap_readpage(struct page *page, bool do_poll)
+{
+	return 0;
+}
+
+static inline struct swap_info_struct *swp_swap_info(swp_entry_t entry)
+{
+	return NULL;
+}
 
 #define swap_address_space(entry)		(NULL)
 #define get_nr_swap_pages()			0L
@@ -583,6 +596,11 @@ static inline void delete_from_swap_cache(struct page *page)
 }
 
 static inline int page_swapcount(struct page *page)
+{
+	return 0;
+}
+
+static inline int __swap_count(struct swap_info_struct *si, swp_entry_t entry)
 {
 	return 0;
 }
