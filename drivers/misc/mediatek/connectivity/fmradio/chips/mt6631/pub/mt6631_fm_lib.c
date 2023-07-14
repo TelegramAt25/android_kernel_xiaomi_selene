@@ -1937,6 +1937,10 @@ static signed int mt6631_soft_mute_tune(unsigned short freq, signed int *rssi, s
 		WCN_DBG(FM_ALT | CHIP, "smt get CQI failed\n");
 		return false;
 	}
+    if(mt6631_is_dese_chan(freq)){
+        WCN_DBG(FM_NTC | CHIP, "%s: is dese chan freq=%d\n", __func__, freq);
+        *valid=false;
+    }
 	WCN_DBG(FM_NTC | CHIP, "valid=%d\n", *valid);
 	return true;
 }
@@ -2132,12 +2136,12 @@ static unsigned short mt6631_scan_dese_list[] = {
 };
 #else
 static unsigned short mt6631_scan_dese_list[] = {
-	6910, 6920, 7680, 7800, 8450, 9210, 9220, 9230, 9590, 9600, 9830, 9900, 9980, 9990, 10400, 10750, 10760
+	6910, 6920, 7680, 7800, 8450, 9100, 9210, 9220, 9230, 9590, 9600, 9830, 9900, 9980, 9990,10340, 10400, 10460, 10750, 10760
 };
 #endif
 
 static const unsigned short mt6631_SPI_hopping_list[] = {
-	6510, 6520, 6530, 7780, 7790, 7800, 7810, 7820, 9090, 9100, 9110, 9120, 10380, 10390, 10400, 10410, 10420
+	6510, 6520, 6530, 7780, 7790, 7800, 7810, 7820, 9090, 9110, 9120, 10380, 10390, 10400, 10410, 10420
 };
 
 static const unsigned short mt6631_I2S_hopping_list[] = {

@@ -1043,6 +1043,7 @@ u_int8_t rlmDomainIsValidRfSetting(struct ADAPTER *prAdapter,
 				   enum ENUM_CHANNEL_WIDTH eChannelWidth,
 				   uint8_t ucChannelS1, uint8_t ucChannelS2);
 
+uint32_t wmt_get_cn_cfg(void);
 #if CFG_SUPPORT_PWR_LIMIT_COUNTRY
 
 u_int8_t

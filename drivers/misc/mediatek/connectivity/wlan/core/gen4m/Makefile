@@ -375,6 +375,10 @@ ccflags-y += -I$(srctree)/drivers/misc/mediatek/connectivity/common
 ccflags-y += -I$(srctree)/drivers/devfreq/
 ccflags-y += -I$(srctree)/net
 
+#K19S code for HQ-167460 by fenghaitao at 2021/11/25 start
+ccflags-y += -I$(srctree)/drivers/misc/hqsysfs/
+#K19S code for HQ-167460 by fenghaitao at 2021/11/25 end
+
 ifeq ($(CONFIG_MTK_MCIF_WIFI_SUPPORT), y)
 ccflags-y += -I$(srctree)/drivers/misc/mediatek/mddp/include/
 ccflags-y += -DCFG_MTK_MCIF_WIFI_SUPPORT=1

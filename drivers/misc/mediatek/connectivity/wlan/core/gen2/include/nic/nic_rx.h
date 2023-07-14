@@ -173,6 +173,10 @@ typedef struct _RX_MAILBOX_T {
 
 typedef WLAN_STATUS(*PROCESS_RX_MGT_FUNCTION) (P_ADAPTER_T, P_SW_RFB_T);
 
+struct ACTION_FRAME_SIZE_MAP {
+	UINT_16 u2Index; /* High byte for Action, low byte for Category */
+	size_t len;
+};
 /*******************************************************************************
 *                            P U B L I C   D A T A
 ********************************************************************************

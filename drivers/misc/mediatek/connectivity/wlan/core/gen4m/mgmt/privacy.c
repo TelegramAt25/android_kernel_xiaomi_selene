@@ -781,7 +781,8 @@ u_int8_t secPrivacySeekForEntry(
 
 	prWtbl = prAdapter->rWifiVar.arWtbl;
 
-	ucStartIDX = 1;
+	/* reserve wtbl IDX 0~3 for BIP*/
+	ucStartIDX = 4;
 	ucMaxIDX = prAdapter->ucTxDefaultWlanIndex - 1;
 
 	for (i = ucStartIDX; i <= ucMaxIDX; i++) {
@@ -978,8 +979,6 @@ void secRemoveBssBcEntry(IN struct ADAPTER *prAdapter,
 					secPrivacyFreeForEntry(prAdapter,
 						prBssInfo->ucBMCWlanIndexS[i]);
 
-			prBssInfo->ucBMCWlanIndexSUsed[i] = FALSE;
-			prBssInfo->ucBMCWlanIndexS[i] = WTBL_RESERVED_ENTRY;
 
 			}
 
@@ -1008,9 +1007,7 @@ void secRemoveBssBcEntry(IN struct ADAPTER *prAdapter,
 			if (prBssInfo->wepkeyUsed[i])
 				secPrivacyFreeForEntry(prAdapter,
 					       prBssInfo->wepkeyWlanIdx);
-			prBssInfo->wepkeyUsed[i] = FALSE;
 		}
-		prBssInfo->wepkeyWlanIdx = WTBL_RESERVED_ENTRY;
 		prBssInfo->fgBcDefaultKeyExist = FALSE;
 		prBssInfo->ucBcDefaultKeyIdx = 0xff;
 	}
@@ -1067,11 +1064,12 @@ secPrivacySeekForBcEntry(IN struct ADAPTER *prAdapter,
 		prBSSInfo->eCurrentOPMode, prBSSInfo->eNetworkType,
 		fgCheckKeyId);
 
-	ucStartIDX = 1;
+	/* reserve wtbl IDX 0~3 for BIP*/
+	ucStartIDX = 4;
 	ucMaxIDX = prAdapter->ucTxDefaultWlanIndex - 1;
 
 	if (ucAlg == CIPHER_SUITE_BIP) {
-		ucEntry = 0;
+		ucEntry = ucBssIndex;
 	} else {
 		for (i = ucStartIDX; i <= ucMaxIDX; i++) {
 

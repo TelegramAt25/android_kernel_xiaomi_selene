@@ -704,9 +704,25 @@ void aisFsmStateInit_JOIN(IN struct ADAPTER *prAdapter,
 		prStaRec->fgIsReAssoc = FALSE;
 
 		switch (prConnSettings->eAuthMode) {
+                /** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 begin */
+		case AUTH_MODE_OPEN:
+			if (prConnSettings->rRsnInfo.au4AuthKeyMgtSuite[0]
+					== WLAN_AKM_SUITE_SAE) {
+				prAisFsmInfo->ucAvailableAuthTypes =
+				(uint8_t) (AUTH_TYPE_OPEN_SYSTEM |
+					AUTH_TYPE_SAE);
+				DBGLOG(AIS, INFO,
+					"JOIN INIT: eAuthMode == OPEN | SAE\n");
+			} else {
+				prAisFsmInfo->ucAvailableAuthTypes =
+				(uint8_t) AUTH_TYPE_OPEN_SYSTEM;
+				DBGLOG(AIS, INFO,
+					"JOIN INIT: eAuthMode == OPEN\n");
+			}
+			break;
+                /** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 end */
 		case AUTH_MODE_WPA2_FT:
 		case AUTH_MODE_WPA2_FT_PSK:
-		case AUTH_MODE_OPEN:	/* Note: Omit break here. */
 		case AUTH_MODE_WPA:
 		case AUTH_MODE_WPA_PSK:
 		case AUTH_MODE_WPA2:
@@ -921,10 +937,16 @@ u_int8_t aisFsmStateInit_RetryJOIN(IN struct ADAPTER *prAdapter,
 {
 	struct AIS_FSM_INFO *prAisFsmInfo;
 	struct MSG_SAA_FSM_START *prJoinReqMsg;
+	/** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 begin */
+	struct CONNECTION_SETTINGS *prConnSettings;
+	/** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 end */
 
 	DEBUGFUNC("aisFsmStateInit_RetryJOIN()");
 
 	prAisFsmInfo = aisGetAisFsmInfo(prAdapter, ucBssIndex);
+	/** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 begin */
+	prConnSettings = aisGetConnSettings(prAdapter, ucBssIndex);
+	/** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 end */
 
 	/* Retry other AuthType if possible */
 	if (!prAisFsmInfo->ucAvailableAuthTypes)
@@ -933,12 +955,30 @@ u_int8_t aisFsmStateInit_RetryJOIN(IN struct ADAPTER *prAdapter,
 	if ((prStaRec->u2StatusCode !=
 		STATUS_CODE_AUTH_ALGORITHM_NOT_SUPPORTED) &&
 		(prStaRec->u2StatusCode !=
-		STATUS_CODE_AUTH_TIMEOUT)) {
+	/** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 begin */
+		STATUS_CODE_AUTH_TIMEOUT) &&
+		(prStaRec->u2StatusCode !=
+		STATUS_CODE_INVALID_INFO_ELEMENT) &&
+		(prStaRec->u2StatusCode !=
+		STATUS_INVALID_PMKID)) {
 		prAisFsmInfo->ucAvailableAuthTypes = 0;
 		return FALSE;
 	}
 
-	if (prAisFsmInfo->ucAvailableAuthTypes & (uint8_t)
+	if (prConnSettings->rRsnInfo.au4AuthKeyMgtSuite[0]
+		== WLAN_AKM_SUITE_SAE &&
+		prAisFsmInfo->ucAvailableAuthTypes & (uint8_t)
+		AUTH_TYPE_SAE) {
+		DBGLOG(AIS, INFO,
+		       "RETRY JOIN INIT: Retry Authentication with AuthType == SAE.\n");
+
+		prAisFsmInfo->ucAvailableAuthTypes &=
+		    ~(uint8_t) AUTH_TYPE_SAE;
+
+		prStaRec->ucAuthAlgNum =
+		    (uint8_t) AUTH_ALGORITHM_NUM_SAE;
+	} else if (prAisFsmInfo->ucAvailableAuthTypes & (uint8_t)
+	/** HQ-taoyuan modify for K19S HQ-161564 2021.10.28 end */
 	    AUTH_TYPE_OPEN_SYSTEM) {
 
 		DBGLOG(AIS, INFO,
@@ -2405,9 +2445,28 @@ void aisFsmRunEventScanDone(IN struct ADAPTER *prAdapter,
 		/* Radio Measurement is on-going, schedule to next Measurement
 		 ** Element
 		 */
-	} else
-		rrmStartNextMeasurement(prAdapter, FALSE, ucBssIndex);
+	} else {
+#if CFG_SUPPORT_802_11K
+		struct LINK *prBSSDescList =
+			&prAdapter->rWifiVar.rScanInfo.rBSSDescList;
+		struct BSS_DESC *prBssDesc = NULL;
+		uint32_t count = 0;
 
+		/* collect updated bss for beacon request measurement */
+		LINK_FOR_EACH_ENTRY(prBssDesc, prBSSDescList, rLinkEntry,
+				    struct BSS_DESC)
+		{
+			if (TIME_BEFORE(prRmReq->rScanStartTime,
+				prBssDesc->rUpdateTime)) {
+				rrmCollectBeaconReport(
+					prAdapter, prBssDesc, ucBssIndex);
+				count++;
+			}
+		}
+		DBGLOG(RRM, INFO, "BCN report Active Mode, total: %d\n", count);
+#endif
+		rrmStartNextMeasurement(prAdapter, FALSE, ucBssIndex);
+	}
 }				/* end of aisFsmRunEventScanDone() */
 
 /*----------------------------------------------------------------------------*/

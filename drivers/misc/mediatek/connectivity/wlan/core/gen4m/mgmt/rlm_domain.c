@@ -71,6 +71,11 @@
 #include "precomp.h"
 #include "rlm_txpwr_init.h"
 
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 start*/
+#include "hqsys_pcba.h"
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 end*/
+
+
 /*******************************************************************************
  *                              C O N S T A N T S
  *******************************************************************************
@@ -104,6 +109,10 @@ char *g_au1TxPwrOperationLabel[] = {
 
 #define PWR_BUF_LEN 200
 
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 start*/
+extern PCBA_CONFIG get_huaqin_pcba_config(void);
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 end*/
+
 /*******************************************************************************
  *                             D A T A   T Y P E S
  *******************************************************************************
@@ -133,6 +142,12 @@ char *g_au1TxPwrDefaultSetting[] = {
 #endif /* CFG_SUPPORT_DYNA_TX_PWR_CTRL_OFDM_SETTING */
 };
 #endif
+
+#include "linux/fcntl.h"
+#include "linux/fs.h"
+#define BOARD_HW_INFO_FILE      "/sys/devices/virtual/huaqin/interface/hw_info/pcba_config"
+static int config_len(void);
+
 /* The following country or domain shall be set from host driver.
  * And host driver should pass specified DOMAIN_INFO_ENTRY to MT6620 as
  * the channel list of being a STA to do scanning/searching AP or being an
@@ -2551,6 +2566,42 @@ rlmDomainCheckPowerLimitValid(struct ADAPTER *prAdapter,
 
 }
 
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 start*/
+// return 0-- k19a  1-- k19s CN   2-- k19s GL
+uint32_t wmt_get_cn_cfg(void)
+{
+    int huaqin_pcba_config=0;
+    INT32 ret = -1;
+
+    huaqin_pcba_config = get_huaqin_pcba_config();
+    DBGLOG(RLM, ERROR, "wmt_get_cn_cfg config %d", huaqin_pcba_config);
+    if(huaqin_pcba_config == 9
+            || huaqin_pcba_config == 22
+            || huaqin_pcba_config == 35
+            || huaqin_pcba_config == 48
+            || huaqin_pcba_config == 61
+            || huaqin_pcba_config == 74){
+        DBGLOG(RLM, ERROR, " this device is k19s CN");
+        ret = 1;
+    }else if((huaqin_pcba_config > 9 && huaqin_pcba_config < 14)
+            || (huaqin_pcba_config > 22 && huaqin_pcba_config < 27)
+            || (huaqin_pcba_config > 35 && huaqin_pcba_config < 40)
+            || (huaqin_pcba_config > 48 && huaqin_pcba_config < 53)
+            || (huaqin_pcba_config > 61 && huaqin_pcba_config <66)
+            || (huaqin_pcba_config > 74 && huaqin_pcba_config <79)){
+        DBGLOG(RLM, ERROR, " this device is k19s GL/T/U/V");
+        ret = 2;
+    }else{
+        DBGLOG(RLM, ERROR, "this device is k19A ");
+        ret = 0;
+    }
+
+    return ret;
+}
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 end*/
+
+
+
 /*----------------------------------------------------------------------------*/
 /*!
  * @brief 1.Check if power limit configuration table valid(channel intervel)
@@ -2563,7 +2614,6 @@ rlmDomainCheckPowerLimitValid(struct ADAPTER *prAdapter,
 /*----------------------------------------------------------------------------*/
 void rlmDomainCheckCountryPowerLimitTable(struct ADAPTER *prAdapter)
 {
-#define PwrLmtConf g_rRlmPowerLimitConfiguration
 	uint16_t i, j;
 	uint16_t u2CountryCodeTable, u2CountryCodeCheck;
 	u_int8_t fgChannelValid = FALSE;
@@ -2571,18 +2621,40 @@ void rlmDomainCheckCountryPowerLimitTable(struct ADAPTER *prAdapter)
 	u_int8_t fgEntryRepetetion = FALSE;
 	u_int8_t fgTableValid = TRUE;
 
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 start*/
+    int len = config_len();
+    int ret = -1;
+    struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION *PwrLmtConf;
+     DBGLOG(RLM, ERROR, " config_len:%d",len);
+     ret = wmt_get_cn_cfg();
+    if(ret == 0){
+        DBGLOG(RLM, ERROR, " power limit config k19A");
+        PwrLmtConf = g_rRlmPowerLimitConfiguration;
+    }else if(ret == 1){
+        DBGLOG(RLM, ERROR, " power limit config k19S CN");
+        PwrLmtConf = g_rRlmPowerLimitConfiguration_K19S;
+    }else{
+        DBGLOG(RLM, ERROR, " power limit config k19S GL");
+        PwrLmtConf = g_rRlmPowerLimitConfiguration_K19SGL;
+    }
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 end*/
 	/*1.Configuration Table Check */
-	for (i = 0; i < sizeof(PwrLmtConf) /
-	     sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION); i++) {
+/*K19S code for HQ-164592 by fenghaitao at 2021/11/13 start*/
+	//for (i = 0; i < sizeof(PwrLmtConf) /
+	//     sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION); i++) {
+	for (i = 0; i < len; i++) {
+/*K19S code for HQ-164592 by fenghaitao at 2021/11/13 end*/
 		/*Table Country Code */
 		WLAN_GET_FIELD_BE16(&PwrLmtConf[i].aucCountryCode[0],
 				    &u2CountryCodeTable);
 
 		/*<1>Repetition Entry Check */
-		for (j = i + 1; j < sizeof(PwrLmtConf) /
-		     sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
-		     j++) {
-
+/*K19S code for HQ-164592 by fenghaitao at 2021/11/13 start*/
+		//for (j = i + 1; j < sizeof(PwrLmtConf) /
+		//     sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+		//     j++) {
+		for (j = i + 1; j < len; j++) {
+/*K19S code for HQ-164592 by fenghaitao at 2021/11/13 end*/
 			WLAN_GET_FIELD_BE16(&PwrLmtConf[j].aucCountryCode[0],
 					    &u2CountryCodeCheck);
 			if (((PwrLmtConf[i].ucCentralCh) ==
@@ -2672,7 +2744,6 @@ void rlmDomainCheckCountryPowerLimitTable(struct ADAPTER *prAdapter)
 	}
 	if (fgEntryRepetetion == FALSE)
 		DBGLOG(RLM, TRACE, "Domain: Default Table no Repetiton.\n");
-#undef PwrLmtConf
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2905,6 +2976,18 @@ void rlmDomainCopyFromConfigTable(struct CMD_CHANNEL_POWER_LIMIT *prCmdPwrLimit,
 #endif /* CFG_SUPPORT_DYNA_TX_PWR_CTRL_OFDM_SETTING */
 }
 
+static int config_len(){
+    int len;
+    int borad_cfg = wmt_get_cn_cfg();
+    if(borad_cfg == 0){
+        len = sizeof(g_rRlmPowerLimitConfiguration)/sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+    }else if(borad_cfg == 1){
+        len =sizeof(g_rRlmPowerLimitConfiguration_K19S)/sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+    }else{
+        len =sizeof(g_rRlmPowerLimitConfiguration_K19SGL)/sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+    }
+    return len;
+}
 
 /*----------------------------------------------------------------------------*/
 /*!
@@ -2919,7 +3002,7 @@ void rlmDomainCopyFromConfigTable(struct CMD_CHANNEL_POWER_LIMIT *prCmdPwrLimit,
 void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 			struct CMD_SET_COUNTRY_CHANNEL_POWER_LIMIT *prCmd)
 {
-#define PwrLmtConf g_rRlmPowerLimitConfiguration
+
 #define PwrLmtConfHE g_rRlmPowerLimitConfigurationHE
 	uint16_t i, k;
 	uint16_t u2CountryCodeTable = COUNTRY_CODE_NULL;
@@ -2928,11 +3011,36 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 	struct CMD_CHANNEL_POWER_LIMIT_HE *prCmdPwrLimtHE;
 	u_int8_t fgChannelValid;
 	uint8_t ucCentCh;
-	uint8_t ucPwrLmitConfSize = sizeof(PwrLmtConf) /
-		sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 start*/
+    int borad_cfg = -1;
 
+    struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION *PwrLmtConf;
+
+//	uint8_t ucPwrLmitConfSize = sizeof(*PwrLmtConf) /
+//		sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION);
+    uint8_t ucPwrLmitConfSize=config_len();
 	uint8_t ucPwrLmitConfSizeHE = sizeof(PwrLmtConfHE) /
 		sizeof(struct COUNTRY_POWER_LIMIT_TABLE_CONFIGURATION_HE);
+
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 end*/
+
+
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 start*/
+      borad_cfg = wmt_get_cn_cfg();
+    if(borad_cfg == 0){
+        PwrLmtConf = g_rRlmPowerLimitConfiguration;
+      	DBGLOG(RLM, ERROR, " g_rRlmPowerLimitConfiguration");
+    }else if(borad_cfg == 1){
+        PwrLmtConf = g_rRlmPowerLimitConfiguration_K19S;
+      	DBGLOG(RLM, ERROR, " g_rRlmPowerLimitConfiguration_K19S");
+    }else{
+        PwrLmtConf = g_rRlmPowerLimitConfiguration_K19SGL;
+        DBGLOG(RLM, ERROR, " g_rRlmPowerLimitConfiguration_K19SGL");
+    }
+
+
+    DBGLOG(RLM, ERROR, "  ucPwrLmitConfSize = %d",ucPwrLmitConfSize);
+/*K19S code for K19S-8 by fenghaitao at 2021/09/03 end*/
 
 	eType = prCmd->ucLimitType;
 	/*Build power limit cmd by configuration table information */
@@ -3029,7 +3137,6 @@ void rlmDomainBuildCmdByConfigTable(struct ADAPTER *prAdapter,
 			}
 		}
 	}
-#undef PwrLmtConf
 #undef PwrLmtConfHE
 
 }

@@ -195,6 +195,54 @@ static struct RX_EVENT_HANDLER arEventTable[] = {
 #endif
 };
 
+static const struct ACTION_FRAME_SIZE_MAP arActionFrameReservedLen[] = {
+	{(uint16_t)(CATEGORY_QOS_ACTION | ACTION_QOS_MAP_CONFIGURE << 8),
+	 sizeof(struct _ACTION_QOS_MAP_CONFIGURE_FRAME)},
+	{(uint16_t)(CATEGORY_PUBLIC_ACTION | ACTION_PUBLIC_20_40_COEXIST << 8),
+	 OFFSET_OF(struct ACTION_20_40_COEXIST_FRAME, rChnlReport)},
+	{(uint16_t)
+	 (CATEGORY_PUBLIC_ACTION | ACTION_PUBLIC_VENDOR_SPECIFIC << 8),
+	 sizeof(struct WLAN_PUBLIC_VENDOR_ACTION_FRAME)},
+	{(uint16_t)(CATEGORY_HT_ACTION | ACTION_HT_NOTIFY_CHANNEL_WIDTH << 8),
+	 sizeof(struct ACTION_NOTIFY_CHNL_WIDTH_FRAME)},
+	{(uint16_t)(CATEGORY_HT_ACTION | ACTION_HT_SM_POWER_SAVE << 8),
+	 sizeof(struct ACTION_SM_POWER_SAVE_FRAME)},
+	{(uint16_t)(CATEGORY_SA_QUERY_ACTION | ACTION_SA_QUERY_REQUEST << 8),
+	 sizeof(struct ACTION_SA_QUERY_FRAME)},
+	{(uint16_t)
+	 (CATEGORY_WNM_ACTION | ACTION_WNM_TIMING_MEASUREMENT_REQUEST << 8),
+	 sizeof(struct ACTION_WNM_TIMING_MEAS_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_MEASUREMENT_REQ << 8),
+	 sizeof(struct ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_MEASUREMENT_REPORT << 8),
+	 sizeof(struct ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_TPC_REQ << 8),
+	 sizeof(struct ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_TPC_REPORT << 8),
+	 sizeof(struct ACTION_SM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_SPEC_MGT | ACTION_CHNL_SWITCH << 8),
+	 sizeof(struct ACTION_SM_REQ_FRAME)},
+	{(uint16_t)
+	 (CATEGORY_VHT_ACTION | ACTION_OPERATING_MODE_NOTIFICATION << 8),
+	 sizeof(struct ACTION_OP_MODE_NOTIFICATION_FRAME)},
+#if (CFG_SUPPORT_TWT == 1)
+	{(uint16_t)(CATEGORY_S1G_ACTION | ACTION_S1G_TWT_SETUP << 8),
+	 sizeof(struct _ACTION_TWT_SETUP_FRAME)},
+	{(uint16_t)(CATEGORY_S1G_ACTION | ACTION_S1G_TWT_TEARDOWN << 8),
+	 sizeof(struct _ACTION_TWT_TEARDOWN_FRAME)},
+	{(uint16_t)(CATEGORY_S1G_ACTION | ACTION_S1G_TWT_INFORMATION << 8),
+	 sizeof(struct _ACTION_TWT_INFO_FRAME)},
+#endif
+	{(uint16_t)(CATEGORY_RM_ACTION | RM_ACTION_RM_REQUEST << 8),
+	 sizeof(struct ACTION_RM_REQ_FRAME)},
+	{(uint16_t)(CATEGORY_RM_ACTION | RM_ACTION_REIGHBOR_RESPONSE << 8),
+	 sizeof(struct ACTION_NEIGHBOR_REPORT_FRAME)},
+	{(uint16_t)(CATEGORY_WME_MGT_NOTIFICATION | ACTION_ADDTS_RSP << 8),
+	 sizeof(struct WMM_ACTION_TSPEC_FRAME)},
+	{(uint16_t)(CATEGORY_WME_MGT_NOTIFICATION | ACTION_DELTS << 8),
+	 sizeof(struct WMM_ACTION_TSPEC_FRAME)},
+};
+
 /*******************************************************************************
  *                                 M A C R O S
  *******************************************************************************
@@ -493,7 +541,7 @@ void nicRxClearFrag(IN struct ADAPTER *prAdapter,
 
 	for (j = 0; j < MAX_NUM_CONCURRENT_FRAGMENTED_MSDUS; j++) {
 		prFragInfo = &prStaRec->rFragInfo[j];
-
+        
 		if (prFragInfo->pr1stFrag) {
 			nicRxReturnRFB(prAdapter, prFragInfo->pr1stFrag);
 			prFragInfo->pr1stFrag = (struct SW_RFB *)NULL;
@@ -701,24 +749,20 @@ struct SW_RFB *nicRxDefragMPDU(IN struct ADAPTER *prAdapter,
 				&& (u8PN != prFragInfo->u8NextPN))
 			) {
 			DBGLOG(RX, INFO, "non-cont FragNo or PN, drop it.");
-
 			DBGLOG(RX, INFO,
 				"SN:%04x NxFragN:%02x FragN:%02x\n",
 				prFragInfo->u2SeqNo,
 				prFragInfo->ucNextFragNo,
 				ucFragNo);
-
 			if (ucSecMode != CIPHER_SUITE_NONE)
 				DBGLOG(RX, INFO,
 					"SN:%04x NxPN:%016x PN:%016x\n",
 					prFragInfo->u2SeqNo,
 					prFragInfo->u8NextPN,
 					u8PN);
-
 			/* discard fragments if FragNo is non-cont. */
 			nicRxReturnRFB(prAdapter, prFragInfo->pr1stFrag);
 			prFragInfo->pr1stFrag = (struct SW_RFB *) NULL;
-
 			nicRxReturnRFB(prAdapter, prSWRfb);
 			return (struct SW_RFB *) NULL;
 		}
@@ -751,7 +795,6 @@ struct SW_RFB *nicRxDefragMPDU(IN struct ADAPTER *prAdapter,
 
 		prFragInfo->u2SeqNo = u2SeqNo;
 		prFragInfo->ucNextFragNo = ucFragNo + 1; /* should be 1 */
-
 #if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
 		prFragInfo->ucSecMode = ucSecMode;
 		if (prFragInfo->ucSecMode != CIPHER_SUITE_NONE)
@@ -761,7 +804,7 @@ struct SW_RFB *nicRxDefragMPDU(IN struct ADAPTER *prAdapter,
 #endif /* CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION */
 
 		DBGLOG(RX, LOUD,
-			"First: SeqCtrl:%04x, SN:%04x, NxFragN = %02x\n",
+		       "First: SeqCtrl:%04x, SN:%04x, NxFragN = %02x\n",
 			u2SeqCtrl, prFragInfo->u2SeqNo,
 			prFragInfo->ucNextFragNo);
 
@@ -782,7 +825,7 @@ struct SW_RFB *nicRxDefragMPDU(IN struct ADAPTER *prAdapter,
 			prFragInfo->pr1stFrag = (struct SW_RFB *) NULL;
 
 			nicRxReturnRFB(prAdapter, prSWRfb);
-			DBGLOG(RX, LOUD,
+                	DBGLOG(RX, LOUD,
 				"Defrag: dropped due length > CFG_RX_MAX_PKT_SIZE\n");
 		} else {
 			kalMemCopy(prFragInfo->pucNextFragStart,
@@ -807,7 +850,6 @@ struct SW_RFB *nicRxDefragMPDU(IN struct ADAPTER *prAdapter,
 					prSWRfb->u2PayloadLength;
 
 				prFragInfo->ucNextFragNo++;
-
 #if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
 				if (prFragInfo->ucSecMode
 					!= CIPHER_SUITE_NONE)
@@ -1882,7 +1924,6 @@ void nicRxProcessDataPacket(IN struct ADAPTER *prAdapter,
 #if CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION
 	prSwRfb->fgIsFirstSubAMSDULLCMS = FALSE;
 #endif /* CFG_SUPPORT_FRAG_AGG_ATTACK_DETECTION */
-
 #if CFG_WIFI_SW_CIPHER_MISMATCH
 	if (prSwRfb->prStaRec &&
 	    prSwRfb->prStaRec->fgTransmitKeyExist &&
@@ -1891,7 +1932,6 @@ void nicRxProcessDataPacket(IN struct ADAPTER *prAdapter,
 	    prSwRfb->fgIsMC == FALSE &&
 	    !prSwRfb->fgIsCipherMS) {
 		uint16_t u2FrameCtrl = 0;
-
 		if (prSwRfb->fgHdrTran == FALSE) {
 			u2FrameCtrl = ((struct WLAN_MAC_HEADER *)
 				prSwRfb->pvHeader)->u2FrameCtrl;
@@ -1929,6 +1969,7 @@ void nicRxProcessDataPacket(IN struct ADAPTER *prAdapter,
 #if CFG_HIF_RX_STARVATION_WARNING
 		prRxCtrl->u4QueuedCnt++;
 #endif
+
 		ucBssIndex = secGetBssIdxByWlanIdx(prAdapter,
 						   prSwRfb->ucWlanIdx);
 		GLUE_SET_PKT_BSS_IDX(prSwRfb->pvPacket, ucBssIndex);
@@ -4207,6 +4248,40 @@ uint32_t nicRxFlush(IN struct ADAPTER *prAdapter)
 	return WLAN_STATUS_SUCCESS;
 }
 
+uint8_t nicIsActionFrameValid(IN struct SW_RFB *prSwRfb)
+{
+	struct WLAN_ACTION_FRAME *prActFrame;
+	uint16_t u2ActionIndex = 0, u2ExpectedLen = 0;
+	uint32_t u4Idx, u4Size;
+
+	if (prSwRfb->u2PacketLen < sizeof(struct WLAN_ACTION_FRAME) - 1)
+		return FALSE;
+	prActFrame = (struct WLAN_ACTION_FRAME *) prSwRfb->pvHeader;
+
+	DBGLOG(RSN, TRACE, "Action frame category=%d action=%d\n",
+	       prActFrame->ucCategory, prActFrame->ucAction);
+
+	u2ActionIndex = prActFrame->ucCategory | prActFrame->ucAction << 8;
+	u4Size = sizeof(arActionFrameReservedLen) /
+		 sizeof(struct ACTION_FRAME_SIZE_MAP);
+	for (u4Idx = 0; u4Idx < u4Size; u4Idx++) {
+		if (u2ActionIndex == arActionFrameReservedLen[u4Idx].u2Index) {
+			u2ExpectedLen = (uint16_t)
+				arActionFrameReservedLen[u4Idx].len;
+			DBGLOG(RSN, LOUD,
+				"Found expected len of incoming action frame:%d\n",
+				u2ExpectedLen);
+			break;
+		}
+	}
+	if (u2ExpectedLen != 0 && prSwRfb->u2PacketLen < u2ExpectedLen) {
+		DBGLOG(RSN, INFO,
+			"Received an abnormal action frame: packet len/expected len:%d/%d\n",
+			prSwRfb->u2PacketLen, u2ExpectedLen);
+		return FALSE;
+	}
+	return TRUE;
+}
 /*----------------------------------------------------------------------------*/
 /*!
  * @brief
@@ -4230,13 +4305,9 @@ uint32_t nicRxProcessActionFrame(IN struct ADAPTER *
 
 	DBGLOG(RSN, TRACE, "[Rx] nicRxProcessActionFrame\n");
 
-	if (prSwRfb->u2PacketLen < sizeof(struct WLAN_ACTION_FRAME)
-	    - 1)
+	if (!nicIsActionFrameValid(prSwRfb))
 		return WLAN_STATUS_INVALID_PACKET;
 	prActFrame = (struct WLAN_ACTION_FRAME *) prSwRfb->pvHeader;
-
-	DBGLOG(RSN, TRACE, "Action frame category=%d\n",
-	       prActFrame->ucCategory);
 
 #if CFG_SUPPORT_802_11W
 	/* DBGLOG(RSN, TRACE, ("[Rx] fgRobustAction=%d\n", fgRobustAction)); */

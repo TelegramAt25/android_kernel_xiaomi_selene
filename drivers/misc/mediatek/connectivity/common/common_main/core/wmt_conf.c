@@ -23,8 +23,10 @@
 #include "wmt_dev.h"
 #include "wmt_conf.h"
 #include "wmt_detect.h"
+#include "linux/fcntl.h"
+#include "linux/fs.h"
 
-
+#define BOARD_HW_INFO_FILE      "/sys/devices/virtual/huaqin/interface/hw_info/pcba_config"
 /*******************************************************************************
 *                         D A T A   T Y P E S
 ********************************************************************************
@@ -593,6 +595,41 @@ INT32 wmt_conf_set_cfg_file(const PINT8 name)
 	return 0;
 }
 
+INT32 wmt_get_cn_cfg_name(void)
+{
+	INT32 ret = -1;
+  	mm_segment_t fs;
+  	struct file *fd = NULL;
+	void *ptr = (void *)__get_free_pages(GFP_KERNEL,2);
+ 	if (ptr == NULL) {
+            WMT_ERR_FUNC("get free pages err!\n");
+	    return -1;
+        }
+  	fs = get_fs();
+        set_fs(KERNEL_DS);
+
+        fd = filp_open(BOARD_HW_INFO_FILE, O_RDONLY, 0644);
+        if (IS_ERR(fd) || fd->f_op == NULL) {
+            WMT_ERR_FUNC("open pcba_info err!\n");
+            set_fs(fs);
+	    return -1;
+        }
+
+	if ( fd->f_op->read(fd, ptr, PAGE_SIZE << 2, &fd->f_pos) <= 0) {
+		WMT_ERR_FUNC("Can not read form trace file!\n");
+	} else {
+		WMT_INFO_FUNC("board config info:%s\n", ptr);
+          	if (strstr(ptr, "K19S") != NULL && strstr(ptr, "CN") != NULL) {
+        		osal_strncat(&(gDevWmt.cWmtcfgName[0]), CUST_CFG_WMT_SOC_K19SCN, osal_sizeof(CUST_CFG_WMT_SOC_K19SCN));
+			ret = 0;
+		} else {
+			WMT_INFO_FUNC("Not supporting board info,don't set it!\n");
+		}
+	}
+        filp_close(fd,NULL);
+	set_fs(fs);
+	return ret;
+}
 
 INT32 wmt_conf_read_file(VOID)
 {
@@ -604,8 +641,9 @@ INT32 wmt_conf_read_file(VOID)
 	chip_type = wmt_detect_get_chip_type();
 	if (chip_type == WMT_CHIP_TYPE_SOC) {
 		osal_memset(&gDevWmt.cWmtcfgName[0], 0, osal_sizeof(gDevWmt.cWmtcfgName));
-
-		osal_strncat(&(gDevWmt.cWmtcfgName[0]), CUST_CFG_WMT_SOC, osal_sizeof(CUST_CFG_WMT_SOC));
+		if (wmt_get_cn_cfg_name() != 0) {
+		    osal_strncat(&(gDevWmt.cWmtcfgName[0]), CUST_CFG_WMT_SOC, osal_sizeof(CUST_CFG_WMT_SOC));
+		}
 	}
 
 	if (!osal_strlen(&(gDevWmt.cWmtcfgName[0]))) {
@@ -613,11 +651,11 @@ INT32 wmt_conf_read_file(VOID)
 		osal_assert(0);
 		return ret;
 	}
-	WMT_DBG_FUNC("WMT config file:%s\n", &(gDevWmt.cWmtcfgName[0]));
+	WMT_INFO_FUNC("WMT config file:%s\n", &(gDevWmt.cWmtcfgName[0]));
 	if (0 ==
 	    wmt_dev_patch_get(&gDevWmt.cWmtcfgName[0], (osal_firmware **) &gDevWmt.pWmtCfg)) {
 		/*get full name patch success */
-		WMT_DBG_FUNC("get full file name(%s) buf(0x%p) size(%zu)\n",
+		WMT_INFO_FUNC("get full file name(%s) buf(0x%p) size(%zu)\n",
 			      &gDevWmt.cWmtcfgName[0], gDevWmt.pWmtCfg->data,
 			      gDevWmt.pWmtCfg->size);
 		if (0 ==

@@ -72,7 +72,9 @@
 #if CFG_MTK_MCIF_WIFI_SUPPORT
 #include "mddp.h"
 #endif
-
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 start*/
+#include "hqsys_pcba.h"
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 end*/
 /*******************************************************************************
  *                              C O N S T A N T S
  *******************************************************************************
@@ -110,6 +112,11 @@ struct NVRAM_FRAGMENT_RANGE {
 	uint32_t startOfs;
 	uint32_t endOfs;
 };
+
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 start*/
+extern PCBA_CONFIG get_huaqin_pcba_config(void);
+/*K19S code for HQ-167460 by fenghaitao at 2021/11/25 end*/
+
 
 
 /*******************************************************************************
@@ -6944,6 +6951,8 @@ uint8_t wlanGetBssIdxByNetInterface(IN struct GLUE_INFO
 	return ucIdx;
 }
 #endif
+
+
 /*----------------------------------------------------------------------------*/
 /*!
  * @brief This function is to GET network interface for a BSS.
@@ -6978,7 +6987,9 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 #endif
 	uint32_t u4TxHifRes = 0, u4Idx = 0;
 	uint32_t u4PlatformBoostCpuTh = 1;
-
+    /*K19S code for HQ-167460 by fenghaitao at 2021/11/25 start*/
+    int huaqin_pcba_config=0;
+    /*K19S code for HQ-167460 by fenghaitao at 2021/11/25 end*/
 	/* Feature options will be filled by config file */
 
 	prWifiVar->fgEnDefaultIotApRule = (uint8_t) wlanCfgGetUint32(prAdapter,
@@ -7202,8 +7213,23 @@ void wlanInitFeatureOption(IN struct ADAPTER *prAdapter)
 	 */
 	prWifiVar->ucStaBandwidth = (uint8_t) wlanCfgGetUint32(
 				prAdapter, "StaBw", MAX_BW_160MHZ);
-	prWifiVar->ucSta2gBandwidth = (uint8_t) wlanCfgGetUint32(
-				prAdapter, "Sta2gBw", MAX_BW_20MHZ);
+    /*K19S code for HQ-167460 by fenghaitao at 2021/11/25 start*/
+    huaqin_pcba_config = get_huaqin_pcba_config();
+    DBGLOG(RLM, ERROR, " power limit config %d", huaqin_pcba_config);
+    if((huaqin_pcba_config > 8 && huaqin_pcba_config < 14)
+            || (huaqin_pcba_config > 21 && huaqin_pcba_config < 27)
+            || (huaqin_pcba_config > 34 && huaqin_pcba_config < 40)
+            || (huaqin_pcba_config > 47 && huaqin_pcba_config < 53)
+            || (huaqin_pcba_config > 60 && huaqin_pcba_config <66)
+            || (huaqin_pcba_config > 73 && huaqin_pcba_config <79)){
+        DBGLOG(RLM, ERROR, " power limit config k19s");
+        prWifiVar->ucSta2gBandwidth = 0;
+    }else{
+        DBGLOG(RLM, ERROR, " power limit config k19A");
+        prWifiVar->ucSta2gBandwidth = (uint8_t) wlanCfgGetUint32(
+                prAdapter, "Sta2gBw", MAX_BW_20MHZ);
+    }
+    /*K19S code for HQ-167460 by fenghaitao at 2021/11/25 end*/
 	prWifiVar->ucSta5gBandwidth = (uint8_t) wlanCfgGetUint32(
 				prAdapter, "Sta5gBw", MAX_BW_80MHZ);
 	/* GC,GO */
