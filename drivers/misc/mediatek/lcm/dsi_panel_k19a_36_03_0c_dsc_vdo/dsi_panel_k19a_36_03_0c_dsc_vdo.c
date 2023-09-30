@@ -137,7 +137,7 @@ extern bool fts_gesture_flag;
 /*K19S code for HQ-168893 by gaoxue at 2021/11/23 start*/
 extern int32_t fts_ts_tp_suspend(void);
 extern int32_t fts_ts_tp_resume(void);
-extern bool esd_flag;
+static bool esd_flag = false;
 /*K19S code for HQ-168893 by gaoxue at 2021/11/23 end*/
 
 #ifdef CONFIG_MI_ERRFLAG_ESD_CHECK_ENABLE
