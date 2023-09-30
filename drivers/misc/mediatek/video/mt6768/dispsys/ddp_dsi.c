@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2015 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -878,7 +877,9 @@ int ddp_dsi_porch_setting(enum DISP_MODULE_ENUM module, void *handle,
 		if (type == DSI_VFP) {
 			DISPINFO("set dsi%d vfp to %d\n", i, value);
 			DSI_OUTREG32(handle, &DSI_REG[i]->DSI_VFP_NL, value);
-			if (bdg_is_bdg_connected() == 1)
+		/* Huaqin modify for HQ-179522 by jiangyue at 2022/01/24 start */
+			if (pgc->vfp_chg_sync_bdg && bdg_is_bdg_connected() == 1)
+		/* Huaqin modify for HQ-179522 by jiangyue at 2022/01/24 end */
 				ddp_dsi_set_bdg_porch_setting(module, handle, value);
 		/* Huaqin modify for HQ-141505 by caogaojie at 2021/06/18 start */
 			if(value == 54){
@@ -948,6 +949,9 @@ static void DSI_Get_Porch_Addr(enum DISP_MODULE_ENUM module,
 	}
 }
 
+/* Huaqin add for K19S-31 by jiangyue at 2022/01/14 start */
+extern int mtk_rxtx_ratio;
+/* Huaqin add for K19S-31 by jiangyue at 2022/01/14 end */
 void DSI_Config_VDO_Timing_with_DSC(enum DISP_MODULE_ENUM module,
 	struct cmdqRecStruct *cmdq, struct LCM_DSI_PARAMS *dsi_params)
 {
@@ -1023,7 +1027,9 @@ void DSI_Config_VDO_Timing_with_DSC(enum DISP_MODULE_ENUM module,
 		t_hbp = 4;
 		ps_wc = dsi_params->horizontal_active_pixel * dsiTmpBufBpp / 8;
 		t_hbllp = 16 * dsi_params->LANE_NUM;
-		ap_tx_total_word_cnt = (get_bdg_line_cycle() * lanes * RXTX_RATIO + 99) / 100;
+/* Huaqin modify for K19S-31 by jiangyue at 2022/01/14 start */
+		ap_tx_total_word_cnt = (get_bdg_line_cycle() * lanes * mtk_rxtx_ratio + 99) / 100;
+/* Huaqin modify for K19S-31 by jiangyue at 2022/01/14 end */
 
 		switch (dsi_params->mode) {
 		case DSI_CMD_MODE:
