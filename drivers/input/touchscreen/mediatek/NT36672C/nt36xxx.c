@@ -1729,9 +1729,11 @@ static int nvt_set_cur_value(int mode, int value)
 			if (value == 0) {
 				nvt_set_sensitivity_switch(3);
 				nvt_set_pf_switch(0);
+                        	/* Huaqin modify for HQ-158397 by jiangyue at 2021/10/25 start */
 				/* Huaqin modify for HQ-144660 by liunianliang at 2021/07/10 start */
-				nvt_set_er_range_switch(0);
+				nvt_set_er_range_switch(2);
 				/* Huaqin modify for HQ-144660 by liunianliang at 2021/07/10 end */
+				/* Huaqin modify for HQ-158397 by jiangyue at 2021/10/25 end */
 			} else {
 				nvt_set_sensitivity_switch(xiaomi_touch_interfaces.touch_mode[mode][SET_CUR_VALUE]);
 				nvt_set_pf_switch(xiaomi_touch_interfaces.touch_mode[mode][SET_CUR_VALUE]);
@@ -2076,6 +2078,9 @@ Description:
 return:
 	Executive outcomes. 0---succeed. negative---failed
 *******************************************************/
+/*K19A coad for HQ-147450 by feiwen at 2021/7/23 start*/
+int is_nvt = 0;
+/*K19A coad for HQ-147450 by feiwen at 2021/7/23 end*/
 static int32_t nvt_ts_probe(struct spi_device *client)
 {
 	int32_t ret = 0;
@@ -2413,6 +2418,9 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 #endif
 
 	bTouchIsAwake = 0;
+/*K19A coad for HQ-147450 by feiwen at 2021/7/23 start*/
+	is_nvt = 1;
+/*K19A coad for HQ-147450 by feiwen at 2021/7/23 end*/
 	/*BSP.TP add nvt_irq - 2020.11.11 - Start*/
 	ret = nvt_create_sysfs(client);
 	if (ret) {
@@ -3147,6 +3155,11 @@ int __init is_lcm_detect(char *str)
 	}else if (!(strcmp(str, "dsi_panel_k19a_43_02_0b_dsc_vdo_lcm_drv"))) {
 		is_ft_lcm = 5;
 		NVT_LOG("Func:%s is_ft 5:%d", __func__, is_ft_lcm);
+/* Huaqin add for HQ-148560 by caogaojie at 2021/9/30 start */
+	}else if (!(strcmp(str, "dsi_panel_k19s_36_03_0c_dsc_vdo_lcm_drv"))) {
+		is_ft_lcm = 6;
+		NVT_LOG("Func:%s is_ft 6:%d", __func__, is_ft_lcm);
+/* Huaqin add for HQ-148560 by caogaojie at 2021/9/30 end */
 	}
 	printk("Func:%s is_lcm_detect:%s", __func__, str);
 	return 0;
@@ -3175,8 +3188,9 @@ static int32_t __init nvt_driver_init(void)
 	int32_t ret = 0;
 
 	NVT_LOG("start\n");
-
-	if (2 == is_ft_lcm){
+/*K19A coad for HQ-147450 by feiwen at 2021/7/23 start*/
+	if ((4 != is_ft_lcm) && (5 != is_ft_lcm)){
+/*K19A coad for HQ-147450 by feiwen at 2021/7/23 end*/
 		printk("%s result  is_ft:%d", __func__, is_ft_lcm);
 		return -1;
 	}
