@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2015 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -287,6 +286,10 @@ struct display_primary_path_context {
 	unsigned int first_cfg;
 	/*DynFPS end*/
 #endif
+/* Huaqin add for HQ-179522 by jiangyue at 2022/01/24 start */
+	/* change vfp for ap dsi and 6382 at same time */
+	bool vfp_chg_sync_bdg;
+/* Huaqin add for HQ-179522 by jiangyue at 2022/01/24 end */
 };
 
 static inline char *lcm_power_state_to_string(enum lcm_power_state ps)

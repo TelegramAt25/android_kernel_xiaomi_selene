@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2015 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -32,11 +31,6 @@
 //#define _G_MODE_EN_
 //#define _RX_V12_
 //#define _HIGH_FRM_
-#ifdef _HIGH_FRM_	 //for cmd 120Hz
-#define RXTX_RATIO		(299)
-#else
-#define RXTX_RATIO		(225) //for vdo 90Hz
-#endif
 
 enum DISP_BDG_ENUM {
 	DISP_BDG_DSI0 = 0,
