@@ -527,7 +527,9 @@ static void lcm_dfps_int(struct LCM_DSI_PARAMS *dsi)
 	/* if mipi clock solution */
 	/* dfps_params[1].PLL_CLOCK = 380; */
 	/* dfps_params[1].data_rate = xx; */
-	dfps_params[1].vertical_frontporch = 54;
+	/* Huaqin modify for HQ-179522 by jiangyue at 2022/01/24 start */
+	dfps_params[1].vertical_frontporch = 46;
+	/* Huaqin modify for HQ-179522 by jiangyue at 2022/01/24 end */
 	dfps_params[1].vertical_frontporch_for_low_power = 2524;
 	/* Huaqin modify for HQ-124150 by caogaojie at 2021/06/07 end */
 	dsi->dfps_num = 2;
@@ -572,17 +574,19 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 
 	params->dsi.PS = LCM_PACKED_PS_24BIT_RGB888;
 
+/* Huaqin modify for K19S-31 by jiangyue at 2022/01/14 start */
 	params->dsi.vertical_sync_active = 10;
 	params->dsi.vertical_backporch = 10;
-	params->dsi.vertical_frontporch = 54;
+	params->dsi.vertical_frontporch = 46;
 	//params->dsi.vertical_frontporch_for_low_power = 750;
 	params->dsi.vertical_active_line = FRAME_HEIGHT;
 
-	params->dsi.horizontal_sync_active = 22;
-	params->dsi.horizontal_backporch = 22;
-	params->dsi.horizontal_frontporch = 165;
+	params->dsi.horizontal_sync_active = 16;
+	params->dsi.horizontal_backporch = 16;
+	params->dsi.horizontal_frontporch = 148;
 	params->dsi.horizontal_active_pixel = FRAME_WIDTH;
 	params->dsi.ssc_disable = 1;
+	/* Huaqin modify for K19S-31 by jiangyue at 2022/01/14 end */
 #ifdef CONFIG_MTK_MT6382_BDG
 	params->dsi.bdg_ssc_disable = 1;
 	params->dsi.dsc_params.ver = 17;
@@ -622,8 +626,10 @@ static void lcm_get_params(struct LCM_PARAMS *params)
 #ifndef CONFIG_FPGA_EARLY_PORTING
 	/* this value must be in MTK suggested table */
 #ifdef DSC_ENABLE
-	params->dsi.bdg_dsc_enable = 1;
-	params->dsi.PLL_CLOCK = 380; //with dsc
+	/* Huaqin modify for K19S-31 by jiangyue at 2022/01/14 start */
+    params->dsi.bdg_dsc_enable = 1;
+    params->dsi.PLL_CLOCK = 360; //with dsc
+/* Huaqin modify for K19S-31 by jiangyue at 2022/01/14 end */
 #else
 	params->dsi.bdg_dsc_enable = 0;
 	params->dsi.PLL_CLOCK = 574; //without dsc
@@ -755,23 +761,24 @@ static void lcm_init(void)
 	MDELAY(10);
 	/* Huaqin modify for HQ-132702 by caogaojie at 2021/06/15 end */
 	/* Huaqin modify for HQ-132702 by liunianliang at 2021/05/20 end */
-	/* Huaqin modify for HQ-144782 by caogaojie at 2021/07/05 start */
+	/* Huaqin modify for HQ-161950 by jiangyue at 2021/11/05 start */
 	if(esd_flag){
 		nvt_bootloader_reset_locked();
 		push_table(NULL, tp_reset_cmd1, ARRAY_SIZE(tp_reset_cmd1), 1);
-		MDELAY(100);
+		MDELAY(10);
 		nvt_esd_vdd_tp_recovery();
-		MDELAY(100);
+		MDELAY(20);
 		push_table(NULL, tp_reset_cmd2, ARRAY_SIZE(tp_reset_cmd2), 1);
-		MDELAY(50);
+		MDELAY(10);
 		esd_flag = false;
 		g_trigger_disp_esd_recovery = false;
 	}
-	/* Huaqin modify for HQ-144782 by caogaojie at 2021/07/05 end */
+	/* Huaqin modify for HQ-161950 by jiangyue at 2021/11/05 end */
 
 	/* Huaqin modify for HQ-140017 by caogaojie at 2021/07/14 start */
-	//2:PCBA_K19A_LA 8:PCBA_K19L_LA
-	if (hq_selene_pcba_config == 2 || hq_selene_pcba_config == 8){
+	/* Huaqin modify for HQ-155949 by caogaojie at 2021/09/18 start */
+	//2:PCBA_K19A_LA 8:PCBA_K19L_LA 13:PCBA_K19V_LA
+	if (hq_selene_pcba_config == 2 || hq_selene_pcba_config == 8 || hq_selene_pcba_config == 13){
 		push_table(NULL, init_setting_vdo_K19L, ARRAY_SIZE(init_setting_vdo_K19L), 1);
 		LCM_LOGI("%s this is K19L %d\n",__func__,hq_selene_pcba_config);
 	} else {
@@ -779,6 +786,7 @@ static void lcm_init(void)
 		LCM_LOGI("%s this is the other config %d\n",__func__,hq_selene_pcba_config);
 	}
 	/* Huaqin modify for HQ-140017 by caogaojie at 2021/07/14 end */
+	/* Huaqin modify for HQ-155949 by caogaojie at 2021/09/18 end */
 }
 
 static void lcm_suspend(void)
