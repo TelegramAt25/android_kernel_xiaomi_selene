@@ -2,7 +2,6 @@
  * TI LMU (Lighting Management Unit) Backlight Driver
  *
  * Copyright 2016 Texas Instruments
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Author: Milo Kim <milo.kim@ti.com>
  *
@@ -345,9 +344,9 @@ static int ti_lmu_backlight_update_brightness_register(struct ti_lmu_bl *lmu_bl,
 					 brightness);
 		if (ret)
 			return ret;
-	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/07 start */
-		//pr_err("[bkl][after]11bit %s brightness = %d\n", __func__, brightness);
-	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/07 end */
+	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/08 start */
+		//pr_debug("[bkl][after]11bit %s brightness = %d\n", __func__, brightness);
+	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/08 end */
 		val = (brightness >> LMU_BACKLIGHT_11BIT_MSB_SHIFT) & 0xFF;
 	} else {
 		val = brightness & 0xFF;
@@ -381,9 +380,9 @@ static int ti_lmu_backlight_set_brightness(int brightness)
 
 int lm3697_set_brightness(int brightness)
 {
-	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/07 start */
-	//printk(KERN_INFO "[bkl][before]%s brightness = %d\n", __func__, brightness);
-	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/07 end */
+	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/08 start */
+	//pr_debug("[bkl][before]11bit %s brightness = %d\n", __func__, brightness);
+	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/08 end */
 	//return ti_lmu_backlight_update_brightness_register(bl_chip->lmu_bl, brightness);
 
 #ifdef CONFIG_TARGET_PRODUCT_MERLINCOMMON

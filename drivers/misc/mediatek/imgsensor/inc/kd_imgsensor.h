@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2015 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -158,8 +157,11 @@
 #define IMX058_SENSOR_ID                        0x0058
 #define IMX355_SUNNY_ULTRA_SENSOR_ID (0x355 + 1)
 #define IMX355_SUNNY_ULTRA_SENSOR_INDIA_ID (0x355 + 4)
+#define IMX355_SUNNY_ULTRA_SENSOR_CN_ID (0x355 + 6)
 #define IMX355_AAC_ULTRA_SENSOR_ID 0x355
 #define IMX355_AAC_ULTRA_SENSOR_INDIA_ID 0x358
+#define IMX355_AAC_ULTRA_SENSOR_CN_ID (0x355 + 5)
+
 /*OV*/
 #define OV23850_SENSOR_ID                       0x023850
 #define OV16880_SENSOR_ID                       0x016880
@@ -225,8 +227,11 @@
 #define OV50C40_OFILM_MAIN_SENSOR_INDIA_ID               0x565046
 #define S5KJN1_OFILM_MAIN_SENSOR_ID                0x38e1
 #define S5KJN1_OFILM_MAIN_SENSOR_INDIA_ID                0x38e4
+#define S5KJN1_OFILM_MAIN_SENSOR_CN_ID             (0x38e1 + 5)
 #define OV50C40_QTECH_MAIN_SENSOR_ID               (0x565043+1)
 #define OV50C40_QTECH_MAIN_SENSOR_INDIA_ID               (0x565043+4)
+#define OV50C40_QTECH_MAIN_SENSOR_CN_ID             (0x565044 +5)
+
 #define OV13B10_OFILM_SENSOR_ID                 0x560D44
 #define OV13B10_QTECH_SENSOR_ID                 0x560D45
 #define S5K3L6_QTECH_SENSOR_ID                 0x30C6

@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2015 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -847,9 +846,9 @@ int mt_mt65xx_led_set_cust(struct cust_mt65xx_led *cust, int level)
 	case MT65XX_LED_MODE_CUST_LCM:
 		if (strcmp(cust->name, "lcd-backlight") == 0)
 			bl_brightness_hal = level;
-	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/07 start */
-		//printk(KERN_INFO "%s backlight control by LCM\n", __func__);
-	/* Huaqin modify for K19A-271 by caogaojie at 2021/07/07 end */
+		/* Huaqin modify for K19A-271 by caogaojie at 2021/07/08 start */
+		//pr_debug(KERN_INFO "%s backlight control by LCM\n", __func__);
+		/* Huaqin modify for K19A-271 by caogaojie at 2021/07/08 end */
 		/* warning for this API revork */
 		return ((cust_brightness_set) (cust->data)) (level, bl_div_hal);
 
