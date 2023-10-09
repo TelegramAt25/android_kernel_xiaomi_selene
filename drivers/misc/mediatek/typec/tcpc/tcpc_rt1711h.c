@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2017 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * Richtek RT1711H Type-C Port Control Driver
  *

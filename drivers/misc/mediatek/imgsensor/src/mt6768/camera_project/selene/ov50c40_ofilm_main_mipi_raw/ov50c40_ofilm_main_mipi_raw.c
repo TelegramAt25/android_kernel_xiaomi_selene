@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2015 MediaTek Inc.
- * Copyright (C) 2021 XiaoMi, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -136,14 +135,14 @@ static struct imgsensor_info_struct imgsensor_info = {
 	.custom1 = {
 		.pclk = 100000000,
 		.linelength = 1050,
-		.framelength = 3174,
+		.framelength = 3175,
 		.startx = 0,
 		.starty = 0,
 		.grabwindow_width = 4096,
 		.grabwindow_height = 3072,
 		.mipi_data_lp2hs_settle_dc = 85,	//unit(ns), 16/23/65/85 recommanded
 		.mipi_pixel_rate = 512000000,
-		.max_framerate = 300,
+		.max_framerate = 299,
 		},
 
 	.margin = 0x16,
@@ -470,30 +469,30 @@ static void write_shutter(kal_uint64 shutter)
 		} else {
 			imgsensor.frame_length =
 			    (imgsensor.frame_length >> 1) << 1;
-			write_cmos_sensor(0x3208, 0x00);
+			// write_cmos_sensor(0x3208, 0x00);
 			write_cmos_sensor(0x3840, imgsensor.frame_length >> 16);
 			write_cmos_sensor(0x380e, imgsensor.frame_length >> 8);
 			write_cmos_sensor(0x380f, imgsensor.frame_length & 0xFF);
-			write_cmos_sensor(0x3208, 0x10);
-			write_cmos_sensor(0x3208, 0xa0);
+			// write_cmos_sensor(0x3208, 0x10);
+			// write_cmos_sensor(0x3208, 0xa0);
 		}
 	} else {
 	    imgsensor.frame_length = (imgsensor.frame_length >> 1) << 1;
-		write_cmos_sensor(0x3208, 0x00);
+		// write_cmos_sensor(0x3208, 0x00);
 		write_cmos_sensor(0x3840, imgsensor.frame_length >> 16);
 		write_cmos_sensor(0x380e, imgsensor.frame_length >> 8);
 		write_cmos_sensor(0x380f, imgsensor.frame_length & 0xFF);
-		write_cmos_sensor(0x3208, 0x10);
-		write_cmos_sensor(0x3208, 0xa0);
+		// write_cmos_sensor(0x3208, 0x10);
+		// write_cmos_sensor(0x3208, 0xa0);
 	}
 
 	/*Warning : shutter must be even. Odd might happen Unexpected Results */
-	write_cmos_sensor(0x3208, 0x00);
+	// write_cmos_sensor(0x3208, 0x00);
 	write_cmos_sensor(0x3500, (shutter >> 16) & 0xFF);
 	write_cmos_sensor(0x3501, (shutter >> 8) & 0xFF);
 	write_cmos_sensor(0x3502, (shutter)  & 0xFF);
-	write_cmos_sensor(0x3208, 0x10);
-	write_cmos_sensor(0x3208, 0xa0);
+	// write_cmos_sensor(0x3208, 0x10);
+	// write_cmos_sensor(0x3208, 0xa0);
 	LOG_DBG("shutter =%d, framelength =%d, realtime_fps =%d\n",
 		shutter, imgsensor.frame_length, realtime_fps);
 }
@@ -567,18 +566,19 @@ static void set_shutter_frame_length(kal_uint16 shutter,
 			realtime_fps = 146;
 	    set_max_framerate(realtime_fps, 0);
 		} else {
-		imgsensor.frame_length = (imgsensor.frame_length  >> 1) << 1;
+		//imgsensor.frame_length = (imgsensor.frame_length  >> 1) << 1;
 		write_cmos_sensor(0x3840, imgsensor.frame_length >> 16);
 		write_cmos_sensor(0x380e, imgsensor.frame_length >> 8);
 		write_cmos_sensor(0x380f, imgsensor.frame_length & 0xFF);
 		}
 	} else {
-	imgsensor.frame_length = (imgsensor.frame_length  >> 1) << 1;
+	//imgsensor.frame_length = (imgsensor.frame_length  >> 1) << 1;
 		write_cmos_sensor(0x3840, imgsensor.frame_length >> 16);
 		write_cmos_sensor(0x380e, imgsensor.frame_length >> 8);
 		write_cmos_sensor(0x380f, imgsensor.frame_length & 0xFF);
 	}
-
+        if(shutter == 3174)
+            shutter = shutter-1;
 	//write_cmos_sensor(0x3822, 0x14);
 	write_cmos_sensor(0x3500, (shutter >> 16) & 0xFF);   //need to verify
 	write_cmos_sensor(0x3501, (shutter >> 8) & 0xFF);
@@ -827,7 +827,7 @@ kal_uint16 addr_data_pair_init_OV50C40[] = {
 	0x380c, 0x04,
 	0x380d, 0x1a,
 	0x380e, 0x0c,
-	0x380f, 0x66,
+	0x380f, 0x67,
 	0x3810, 0x00,
 	0x3811, 0x08,
 	0x3812, 0x00,
