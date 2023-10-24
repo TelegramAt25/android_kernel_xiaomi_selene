@@ -38,9 +38,8 @@
 #include "mtk_charger_intf.h"
 
 #define __BQ25890H__	1
-
 #include "bq2589x_reg.h"
-
+extern int hq_config(void);
 enum {
 	PN_BQ25890,
 	PN_BQ25892,
@@ -119,7 +118,11 @@ bool cdp_detect = false;
 /*K19A HQHW-963 K19A for sy cdp by langjunjun at 2021/7/15 end*/
 
 static int charger_detect_count = 3;
+static int charger_float_count = 0;
 /* Huaqin add for HQ-134476 by miaozhichao at 2021/5/29 end */
+
+bool cdp_unattach = false;
+
 int get_charger_type(void)
 {
 	return g_charger_type;
@@ -986,10 +989,33 @@ static int bq2589x_inform_charger_type_report(struct bq2589x *bq)
 /*K19A HQHW-963 K19A for sy cdp by langjunjun at 2021/7/15 start*/
 static void bq2589x_cdp_work(struct work_struct *work)
 {
+	int timer_count = 0;
+	
 	struct bq2589x *bq = container_of(work, struct bq2589x, cdp_work.work);
-	bq2589x_inform_charger_type_report(bq);
-	cdp_detect = false;
-	wusb3801_intr_handler_resume();
+	while (1) {
+		if (timer_count >= 10 && cdp_unattach){
+			bq2589x_inform_charger_type_report(bq);
+			cdp_detect = false;
+			wusb3801_intr_handler_resume();
+			pr_err("wlc timer_count more than 10,timer_count:%d \n", timer_count);
+			timer_count = 0;
+			cdp_unattach = false;
+			break;
+		} else if(timer_count < 10  && cdp_unattach) {
+			pr_err("wlc 5S count down! \n");
+			msleep(5000);
+			bq2589x_inform_charger_type_report(bq);
+			cdp_detect = false;
+			wusb3801_intr_handler_resume();
+			pr_err("wlc 5S finish! timer_count less than 10,timer_count:%d \n", timer_count);
+			timer_count = 0;
+			cdp_unattach = false;
+			break;
+		}
+
+		msleep(1000);
+		timer_count++;
+	}
 }
 
 static void bq2589x_inform_charger_type(struct bq2589x *bq)
@@ -1000,8 +1026,11 @@ static void bq2589x_inform_charger_type(struct bq2589x *bq)
 			if ((bq->power_good) && (cdp_detect == false)) {
 				cdp_detect = true;
 				bq2589x_inform_charger_type_report(bq);
+				schedule_delayed_work(&bq->cdp_work, msecs_to_jiffies(1));
+				pr_err("wlc cdp detected \n");
 			} else if ((!bq->power_good) && (cdp_detect == true)) {
-				schedule_delayed_work(&bq->cdp_work, msecs_to_jiffies(5000));
+				cdp_unattach = true;
+				pr_err("wlc cdp unattach happend \n");
 			} else {
 				cancel_delayed_work_sync(&bq->cdp_work);
 			}
@@ -1084,9 +1113,14 @@ static void bq2589x_read_byte_work(struct work_struct *work)
 				pr_err("foce dpdm ti\n");
 				bq2589x_force_dpdm(bq);
 			}else if(vbus_gd && vbus_stat == BQ2589X_VBUS_TYPE_UNKNOWN ) {
-				bq2589x_force_dpdm(bq);
 				charger_detect_count++;
-				pr_err(" foce UNKNOWN ti\n");
+				charger_float_count++;
+				if(charger_float_count <= 30){
+					bq2589x_force_dpdm(bq);
+				} else {
+					charger_float_count = 31;//avoid overflow
+				}
+				pr_err(" foce UNKNOWN ti,charger_float_count:%d\n",charger_float_count);
 			}else if (vbus_gd && vbus_stat == BQ2589X_VBUS_TYPE_NON_STD) {
 				Charger_Detect_Init();
 				bq2589x_dp_set_3P3V(bq);
@@ -1106,9 +1140,14 @@ static void bq2589x_read_byte_work(struct work_struct *work)
 			std_mode_dec = false;
 			pr_err("foce dpdm silergy\n");
 		} else if (vbus_gd && vbus_stat == BQ2589X_VBUS_TYPE_UNKNOWN) {
-			bq2589x_force_dpdm(bq);
+			charger_float_count++;
+			if (charger_float_count <= 30) {
+				bq2589x_force_dpdm(bq);
+			} else {
+				charger_float_count = 31;//avoid overflow
+			}
 			std_mode_dec = false;
-			pr_err("float foce dpdm\n");
+			pr_err(" foce UNKNOWN silergy,charger_float_count:%d\n",charger_float_count);
 		} else if (vbus_gd && vbus_stat == BQ2589X_VBUS_TYPE_NON_STD && !std_mode_dec) {
 			std_mode_dec = true;
 			ret = bq2589x_enter_hiz_mode(bq);
@@ -1148,9 +1187,11 @@ static irqreturn_t bq2589x_irq_handler(int irq, void *data)
 	if (!prev_pg && bq->power_good) {
 		pr_err("adapter/usb inserted\n");
 		charger_detect_count = 3;
+		charger_float_count = 0;
 	}else if (prev_pg && !bq->power_good){
 		hvdcp_type_tmp = HVDCP_NULL;
 		charger_detect_count = 0;
+		charger_float_count = 30;
 	}else{
 		pr_err("prev_pg = %d  bq->power_good = %d\n",prev_pg,bq->power_good);
 	}
@@ -1246,6 +1287,11 @@ static int bq2589x_init_device(struct bq2589x *bq)
 		/* Huaqin add for HQ-134273 by wangqi at 2021/6/1 start */
 		ret = bq2589x_set_term_current(bq, 128);
 		/* Huaqin add for HQ-134273 by wangqi at 2021/6/1 end */
+		if (hq_config() == 4 ||hq_config() == 5 ||
+			 hq_config() == 6 || hq_config() == 7) {
+			ret = bq2589x_set_term_current(bq, 200);
+			pr_err("only K19S set 200ma ieoc wlc\n");
+		}
 		ret = bq2589x_disable_hvdcp(bq);
 		pr_err("disable hvdcp,ret = %d\n",ret);
 	}else{

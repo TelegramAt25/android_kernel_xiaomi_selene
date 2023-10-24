@@ -90,7 +90,6 @@ extern bool tp_charger_status;
 /* Huaqin modify for HQ-131628 by shujiawang at 2021/05/10 end */
 
 static DEFINE_MUTEX(consumer_mutex);
-
 #if defined(TARGET_PRODUCT_LANCELOT) || defined(TARGET_PRODUCT_SHIVA)
 typedef enum {
 	PCBA_UNKNOW = 0,
@@ -118,7 +117,7 @@ typedef enum {
 	PCBA_END,
 } PCBA_CONFIG;
 #elif defined(TARGET_PRODUCT_SELENE)
-/* Huaqin modify for K19A-131 by liunianliang at 2021/04/13 start */
+/* Huaqin modify for HQ-147481 by liunianliang at 2021/07/27 start */
 typedef enum
 {
 	PCBA_UNKNOW = 0,
@@ -131,8 +130,13 @@ typedef enum
 	PCBA_K19C_P0_GLOBAL,
 	PCBA_K19C_P0_IN,
 	PCBA_K19L_P0_LA,
+	PCBA_K19S_P0_CN,
+	PCBA_K19S_P0_GLOBAL,
+	PCBA_K19T_P0_IN,
+	PCBA_K19U_P0_GLOBAL,
+	PCBA_K19V_P0_LA,
 
-	PCBA_K19A_P0_1_GLOBAL = 9,
+	PCBA_K19A_P0_1_GLOBAL = 14,
 	PCBA_K19A_P0_1_LA,
 	PCBA_K19B_P0_1_IN,
 	PCBA_K19B_P0_1_CN,
@@ -140,8 +144,13 @@ typedef enum
 	PCBA_K19C_P0_1_GLOBAL,
 	PCBA_K19C_P0_1_IN,
 	PCBA_K19L_P0_1_LA,
+	PCBA_K19S_P0_1_CN,
+	PCBA_K19S_P0_1_GLOBAL,
+	PCBA_K19T_P0_1_IN,
+	PCBA_K19U_P0_1_GLOBAL,
+	PCBA_K19V_P0_1_LA,
 
-	PCBA_K19A_P1_GLOBAL = 17,
+	PCBA_K19A_P1_GLOBAL = 27,
 	PCBA_K19A_P1_LA,
 	PCBA_K19B_P1_IN,
 	PCBA_K19B_P1_CN,
@@ -149,8 +158,13 @@ typedef enum
 	PCBA_K19C_P1_GLOBAL,
 	PCBA_K19C_P1_IN,
 	PCBA_K19L_P1_LA,
+	PCBA_K19S_P1_CN,
+	PCBA_K19S_P1_GLOBAL,
+	PCBA_K19T_P1_IN,
+	PCBA_K19U_P1_GLOBAL,
+	PCBA_K19V_P1_LA,
 
-	PCBA_K19A_P1_1_GLOBAL = 25,
+	PCBA_K19A_P1_1_GLOBAL = 40,
 	PCBA_K19A_P1_1_LA,
 	PCBA_K19B_P1_1_IN,
 	PCBA_K19B_P1_1_CN,
@@ -158,8 +172,13 @@ typedef enum
 	PCBA_K19C_P1_1_GLOBAL,
 	PCBA_K19C_P1_1_IN,
 	PCBA_K19L_P1_1_LA,
+	PCBA_K19S_P1_1_CN,
+	PCBA_K19S_P1_1_GLOBAL,
+	PCBA_K19T_P1_1_IN,
+	PCBA_K19U_P1_1_GLOBAL,
+	PCBA_K19V_P1_1_LA,
 
-	PCBA_K19A_P2_GLOBAL = 33,
+	PCBA_K19A_P2_GLOBAL = 53,
 	PCBA_K19A_P2_LA,
 	PCBA_K19B_P2_IN,
 	PCBA_K19B_P2_CN,
@@ -167,8 +186,13 @@ typedef enum
 	PCBA_K19C_P2_GLOBAL,
 	PCBA_K19C_P2_IN,
 	PCBA_K19L_P2_LA,
+	PCBA_K19S_P2_CN,
+	PCBA_K19S_P2_GLOBAL,
+	PCBA_K19T_P2_IN,
+	PCBA_K19U_P2_GLOBAL,
+	PCBA_K19V_P2_LA,
 
-	PCBA_K19A_MP_GLOBAL = 41,
+	PCBA_K19A_MP_GLOBAL = 66,
 	PCBA_K19A_MP_LA,
 	PCBA_K19B_MP_IN,
 	PCBA_K19B_MP_CN,
@@ -176,10 +200,15 @@ typedef enum
 	PCBA_K19C_MP_GLOBAL,
 	PCBA_K19C_MP_IN,
 	PCBA_K19L_MP_LA,
+	PCBA_K19S_MP_CN,
+	PCBA_K19S_MP_GLOBAL,
+	PCBA_K19T_MP_IN,
+	PCBA_K19U_MP_GLOBAL,
+	PCBA_K19V_MP_LA,
 
 	PCBA_END,
 } PCBA_CONFIG;
-/* Huaqin modify for K19A-131 by liunianliang at 2021/04/13 end */
+/* Huaqin modify for HQ-147481 by liunianliang at 2021/07/27 end */
 #else
 typedef enum {
 	PCBA_UNKNOW = 0,
@@ -215,16 +244,16 @@ static int thermal_mitigation_dcp[THERMAL_MAX] = {2000000, 2000000, 2000000, 200
 												  2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 1600000, 1600000, 1600000, 1200000};
 
 static int thermal_mitigation_qc2[THERMAL_MAX] = {2000000, 1500000, 1400000, 1300000, 1300000, 1200000, 1100000, 1000000, 900000, 900000, 900000, 900000,
-												  900000, 1200000, 1100000, 1000000, 900000, 800000, 800000, 700000, 600000, 500000, 500000, 400000, 400000};
+												  900000, 1200000, 1100000, 1000000, 900000, 800000, 800000, 700000, 600000, 500000, 500000, 500000, 500000};
 
-static int thermal_mitigation_qc3[THERMAL_MAX] = {3000000, 2700000, 2600000, 2500000, 2300000, 2100000, 2000000, 1800000, 1800000, 1800000, 1800000, 1400000,
-												  1000000, 2200000, 1800000, 1400000, 1200000, 1000000, 800000,  800000,  800000,  800000, 600000, 400000, 300000};
+static int thermal_mitigation_qc3[THERMAL_MAX] = {3000000, 2200000, 2100000, 2000000, 1900000, 1800000, 1600000, 1500000, 1400000, 1400000, 1400000, 1400000,
+												  900000, 1800000, 1700000, 1500000, 1500000, 1200000, 1200000,  1100000,  900000,  900000, 900000, 900000, 900000};
 
 static int thermal_mitigation_dcp_cn[THERMAL_MAX] = {2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000,
 												2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 2000000, 1600000, 1600000, 1600000, 1200000};
 
 static int thermal_mitigation_qc2_cn[THERMAL_MAX] = {2000000, 1400000, 1400000, 1300000, 1200000, 1200000, 1100000, 1000000, 900000, 900000, 900000, 900000,
-												500000, 1200000, 1100000, 1000000, 900000, 800000, 800000, 700000, 600000, 500000, 500000, 400000, 400000};
+												500000, 1200000, 1100000, 1000000, 900000, 800000, 800000, 700000, 600000, 500000, 500000, 500000, 500000};
 
 static int thermal_mitigation_qc3_cn[THERMAL_MAX] = {3000000, 2600000, 2500000, 2400000, 2200000, 2000000, 1800000, 1800000, 1800000, 1800000, 1800000, 1400000,
 												1000000, 2200000, 1800000, 1400000, 1200000, 1000000, 800000, 800000, 800000, 800000, 600000, 400000, 300000};
@@ -955,7 +984,9 @@ void charger_manager_set_prop_system_temp_level(int temp_level)
 	if (pcba_to_thermal == PCBA_J19_MP_CN)
 		is_cn = true;
 #elif defined(TARGET_PRODUCT_SELENE)
-	if (pcba_to_thermal == PCBA_K19B_MP_CN)
+	/* Huaqin modify for HQ-147481 by liunianliang at 2021/07/27 start */
+	if (pcba_to_thermal == PCBA_K19B_MP_CN || pcba_to_thermal == PCBA_K19S_MP_CN)
+	/* Huaqin modify for HQ-147481 by liunianliang at 2021/07/27 end */
 		is_cn = true;
 #else
 	if (pcba_to_thermal == PCBA_J15S_MP_CN)
@@ -1008,15 +1039,24 @@ void charger_manager_set_prop_system_temp_level(int temp_level)
 	/*K19A HQ-124114 K19A charger enable jeita by wangqi at 2021/4/27 end*/
 	// pr_err("%s, system_temp_level:%d thermal_icl_ua:%d \n", __func__,
 	// 		pinfo->system_temp_level, thermal_icl_ua);
-  	/*K19A HQ-129052 K19A charger of thermal by wangqi at 2021/7/1 start*/
+
+
+	// charger_manager_set_charging_current_thermal_limit(pinfo,
+	// 		MAIN_CHARGER, thermal_icl_ua);
+/*
+	_charger_manager_set_input_current_limit(pinfo,
+			MAIN_CHARGER, thermal_icl_ua); */
+	//_charger_manager_set_input_current_limit(pinfo,
+		//	MAIN_CHARGER, thermal_icl_ua);
 	if(pinfo->usb_psy->desc->type == POWER_SUPPLY_TYPE_USB_HVDCP_3){
-		 charger_manager_set_charging_current_thermal_limit(pinfo,
-	 			MAIN_CHARGER, thermal_icl_ua);
+		/* charger_manager_set_charging_current_thermal_limit(pinfo,
+	 			MAIN_CHARGER, thermal_icl_ua);*/
+		_charger_manager_set_input_current_limit(pinfo,
+				MAIN_CHARGER, thermal_icl_ua);
 	}else{
 		_charger_manager_set_input_current_limit(pinfo,
 				MAIN_CHARGER, thermal_icl_ua);
 	}
-  	/*K19A HQ-129052 K19A charger of thermal by wangqi at 2021/7/1 end*/
 }
 
 int charger_manager_check_ra_detected(void)
@@ -1284,6 +1324,16 @@ int hq_config(void)
 		config = K19A;
 	else if(hq_selene_pcba_config == 3 || hq_selene_pcba_config == 4)
 		config = K19B;
+	else if(hq_selene_pcba_config == 11)
+	/* K19SFAC-41 code for K19T by wanglicheng at 20210929 start */
+		config = K19T;
+	/* K19SFAC-41 code for K19T by wanglicheng at 20210929 end */
+	else if(hq_selene_pcba_config == 9 || hq_selene_pcba_config == 10)
+		config = K19S;
+	else if(hq_selene_pcba_config == 12)
+		config = K19U;
+	else if(hq_selene_pcba_config == 13)
+		config = K19V;
 	else
 		config = K19D;
 	printk("%s: config = %d",__func__,config);
@@ -1351,6 +1401,13 @@ void do_sw_jeita_state_machine(struct charger_manager *info)
 				info->data.temp_t4_thres);
 
 			sw_jeita->charging = false;
+                /*HQ-166871  code for K19u by wanglicheng at 20211210 start */
+//		}else if(info->battery_temp >= info->data.temp_t4_thres_minus_x_degree) {
+		}else if(info->battery_temp >= 58) {
+			sw_jeita->charging = false;
+			sw_jeita->sm = TEMP_ABOVE_T4;
+			chr_err("[SW_JEITA]wlc now temprature is %d, te_thres_minus: %d !!\n",info->battery_temp, info->data.temp_t4_thres_minus_x_degree);
+                /*HQ-166871 code for K19u by wanglicheng at 20211210 end */
 		} else {
 			chr_err("[SW_JEITA] Battery Temperature between %d and %d !!\n",
 				info->data.temp_t3_thres,
@@ -2238,6 +2295,7 @@ static int charger_routine_thread(void *arg)
 
 		if (info->charger_thread_polling == true)
 			mtk_charger_start_timer(info);
+
 
 		charger_update_data(info);
 		check_battery_exist(info);
