@@ -45,7 +45,7 @@
 #if defined(CONFIG_DRM_PANEL)
 #include <drm/drm_panel.h>
 #else
-#include <linux/msm_drm_notify.h>
+#include <linux/drm_notify.h>
 #endif
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 #include <linux/earlysuspend.h>
@@ -1592,7 +1592,7 @@ static struct drm_panel *active_panel;
 static int drm_notifier_callback(struct notifier_block *self,
 								 unsigned long event, void *data)
 {
-	struct msm_drm_notifier *evdata = data;
+	struct drm_notify_data *fbdata = data;
 	int *blank = NULL;
 	struct fts_ts_data *ts_data = container_of(self, struct fts_ts_data,
 								  fb_notif);
@@ -1637,7 +1637,7 @@ static int drm_notifier_callback(struct notifier_block *self,
 static int drm_notifier_callback(struct notifier_block *self,
 								 unsigned long event, void *data)
 {
-	struct msm_drm_notifier *evdata = data;
+	struct drm_notify_data *fbdata = data;
 	int *blank = NULL;
 	struct fts_ts_data *ts_data = container_of(self, struct fts_ts_data,
 								  fb_notif);
@@ -1647,8 +1647,8 @@ static int drm_notifier_callback(struct notifier_block *self,
 		return 0;
 	}
 
-	if (!((event == MSM_DRM_EARLY_EVENT_BLANK)
-		  || (event == MSM_DRM_EVENT_BLANK))) {
+	if (!((event == DRM_EARLY_EVENT_BLANK)
+		  || (event == DRM_EVENT_BLANK))) {
 		FTS_INFO("event(%lu) do not need process\n", event);
 		return 0;
 	}
@@ -1656,18 +1656,18 @@ static int drm_notifier_callback(struct notifier_block *self,
 	blank = evdata->data;
 	FTS_INFO("DRM event:%lu,blank:%d", event, *blank);
 	switch (*blank) {
-	case MSM_DRM_BLANK_UNBLANK:
-		if (MSM_DRM_EARLY_EVENT_BLANK == event) {
+	case DRM_BLANK_UNBLANK:
+		if (DRM_EARLY_EVENT_BLANK == event) {
 			FTS_INFO("resume: event = %lu, not care\n", event);
-		} else if (MSM_DRM_EVENT_BLANK == event) {
+		} else if (DRM_EVENT_BLANK == event) {
 			queue_work(fts_data->ts_workqueue, &fts_data->resume_work);
 		}
 		break;
-	case MSM_DRM_BLANK_POWERDOWN:
-		if (MSM_DRM_EARLY_EVENT_BLANK == event) {
+	case DRM_BLANK_POWERDOWN:
+		if (DRM_EARLY_EVENT_BLANK == event) {
 			cancel_work_sync(&fts_data->resume_work);
 			fts_ts_suspend(ts_data->dev);
-		} else if (MSM_DRM_EVENT_BLANK == event) {
+		} else if (DRM_EVENT_BLANK == event) {
 			FTS_INFO("suspend: event = %lu, not care\n", event);
 		}
 		break;
@@ -1888,7 +1888,7 @@ static int fts_ts_probe_entry(struct fts_ts_data *ts_data)
 			FTS_ERROR("[DRM]drm_panel_notifier_register fail: %d\n", ret);
 	}
 #else
-	ret = msm_drm_register_client(&ts_data->fb_notif);
+	ret = drm_register_client(&ts_data->fb_notif);
 	if (ret) {
 		FTS_ERROR("[DRM]Unable to register fb_notifier: %d\n", ret);
 	}
@@ -1998,7 +1998,7 @@ static int fts_ts_remove_entry(struct fts_ts_data *ts_data)
 	if (active_panel)
 		drm_panel_notifier_unregister(active_panel, &ts_data->fb_notif);
 #else
-	if (msm_drm_unregister_client(&ts_data->fb_notif))
+	if (drm_unregister_client(&ts_data->fb_notif))
 		FTS_ERROR("[DRM]Error occurred while unregistering fb_notifier.\n");
 #endif
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
