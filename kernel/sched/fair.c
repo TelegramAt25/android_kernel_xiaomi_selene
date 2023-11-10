@@ -828,6 +828,12 @@ void post_init_entity_util_avg(struct sched_entity *se)
 	struct sched_avg *sa = &se->avg;
 	long cpu_scale = arch_scale_cpu_capacity(NULL, cpu_of(rq_of(cfs_rq)));
 	long cap = (long)(cpu_scale - cfs_rq->avg.util_avg) / 2;
+	int forked_ramup_factor = sched_forked_ramup_factor();
+
+	if (forked_ramup_factor != 0) {
+
+		cap = (long) SCHED_CAPACITY_SCALE * forked_ramup_factor / 100;
+	}
 
 	if (cap > 0) {
 		if (cfs_rq->avg.util_avg != 0) {
@@ -7231,7 +7237,7 @@ find_idlest_group_cpu(struct sched_group *group, struct task_struct *p, int this
 #if defined(CONFIG_MTK_SCHED_INTEROP) && defined(CONFIG_RT_GROUP_SCHED)
 			load += mt_rt_load(i);
 #endif
-			if (load < min_load || (load == min_load && i == this_cpu)) {
+			if (load < min_load) {
 				min_load = load;
 				least_loaded_cpu = i;
 			}
@@ -10576,11 +10582,10 @@ void fix_small_imbalance(struct lb_env *env, struct sd_lb_stats *sds)
 	 * check just in case.
 	 */
 	if (env->sd->flags & SD_ASYM_CPUCAPACITY &&
-	    busiest->group_type == group_overloaded &&
-	    busiest->sum_nr_running > busiest->group_weight &&
-	    local->sum_nr_running < local->group_weight &&
-	    local->group_capacity < busiest->group_capacity)
-		env->imbalance = busiest->load_per_task;
+		busiest->group_type == group_overloaded &&
+		busiest->sum_nr_running > busiest->group_weight &&
+		local->sum_nr_running < local->group_weight &&
+		local->group_capacity < busiest->group_capacity)		env->imbalance = busiest->load_per_task;
 }
 
 /**
