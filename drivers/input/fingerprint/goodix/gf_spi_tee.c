@@ -739,8 +739,10 @@ static irqreturn_t gf_irq(int irq, void *handle)
 static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct gf_device *gf_dev = NULL;
+	struct gf_key gf_key;
 	gf_nav_event_t nav_event = GF_NAV_NONE;
 	uint32_t nav_input = 0;
+	uint32_t key_input = 0;
 #ifdef SUPPORT_REE_SPI
 #ifdef SUPPORT_REE_OSWEGO
 	struct gf_ioc_transfer ioc;
@@ -883,6 +885,50 @@ static long gf_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	case GF_IOC_DISABLE_POWER:
 		gf_debug(INFO_LOG, "%s: GF_IOC_DISABLE_POWER ======\n", __func__);
 		gf_hw_power_enable(gf_dev, 0);
+		break;
+
+	case GF_IOC_INPUT_KEY_EVENT:
+		if (copy_from_user(&gf_key, (struct gf_key *)arg, sizeof(struct gf_key))) {
+			gf_debug(ERR_LOG, "Failed to copy input key event from user to kernel\n");
+			retval = -EFAULT;
+			break;
+		}
+
+		//K19A code for HQ-124340 by shicheng at 2021.5.24 start
+		if (GF_KEY_HOME_DOUBLE_CLICK== gf_key.key) {
+			key_input = GF_KEY_INPUT_DOUBLE;
+		} else if (GF_KEY_POWER == gf_key.key) {
+			key_input = GF_KEY_INPUT_HOME;
+		} else if (GF_KEY_CAMERA == gf_key.key) {
+			key_input = GF_KEY_INPUT_CAMERA;
+		} else if (GF_KEY_HOME == gf_key.key) {
+			key_input = GF_KEY_INPUT_HOME;
+		}else {
+			/* add special key define */
+			key_input = gf_key.key;
+		}
+
+		gf_debug(ERR_LOG, "%s: received key event[%d], key=%d, value=%d\n",
+				__func__, key_input, gf_key.key, gf_key.value);
+
+		if(GF_KEY_HOME_DOUBLE_CLICK == gf_key.key){
+			input_report_key(gf_dev->input, key_input, gf_key.value);
+		    input_sync(gf_dev->input);
+		}
+
+		if ((GF_KEY_POWER == gf_key.key || GF_KEY_CAMERA == gf_key.key) && (gf_key.value == 1)) {
+			input_report_key(gf_dev->input, key_input, 1);
+			input_sync(gf_dev->input);
+			input_report_key(gf_dev->input, key_input, 0);
+			input_sync(gf_dev->input);
+		}
+
+		if ((GF_KEY_HOME == gf_key.key)) {
+		    input_report_key(gf_dev->input, key_input, gf_key.value);
+		    input_sync(gf_dev->input);
+		}
+		//K19A code for HQ-124340 by shicheng at 2021.5.24 end
+            
 		break;
 
 	case GF_IOC_NAV_EVENT:
