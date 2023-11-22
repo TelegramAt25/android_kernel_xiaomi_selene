@@ -13,7 +13,7 @@ config TOUCHSCREEN_NT36672C
 config TOUCHSCREEN_NT36672C_MP_CTRLRAM
 	bool "Novatek NT36xxx Multipoint Control RAM"
 	depends on TOUCHSCREEN_NT36672C
-	default n
+	default y
 	help
 	  Say Y here if you need to use Multipoint Control RAM Testing
 
