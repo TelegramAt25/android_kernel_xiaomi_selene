@@ -70,7 +70,7 @@ extern int32_t nvt_extra_proc_init(void);
 extern void nvt_extra_proc_deinit(void);
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_NT36672C_MP_CTRLRAM
+#if NVT_TOUCH_MP
 extern int32_t nvt_mp_proc_init(void);
 extern void nvt_mp_proc_deinit(void);
 #endif
@@ -2346,7 +2346,7 @@ static int32_t nvt_ts_probe(struct spi_device *client)
 	}
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_NT36672C_MP_CTRLRAM
+#if NVT_TOUCH_MP
 	ret = nvt_mp_proc_init();
 	if (ret != 0) {
 		NVT_ERR("nvt mp proc init failed. ret=%d\n", ret);
@@ -2427,7 +2427,7 @@ err_register_fb_notif_failed:
 	unregister_early_suspend(&ts->early_suspend);
 err_register_early_suspend_failed:
 #endif
-#ifdef CONFIG_TOUCHSCREEN_NT36672C_MP_CTRLRAM
+#if NVT_TOUCH_MP
 	nvt_mp_proc_deinit();
 err_mp_proc_init_failed:
 #endif
@@ -2550,7 +2550,7 @@ static int32_t nvt_ts_remove(struct spi_device *client)
 
 	pm_qos_remove_request(&ts->pm_qos_req);
 
-#ifdef CONFIG_TOUCHSCREEN_NT36672C_MP_CTRLRAM
+#if NVT_TOUCH_MP
 	nvt_mp_proc_deinit();
 #endif
 #if NVT_TOUCH_EXT_PROC
@@ -2633,7 +2633,7 @@ static void nvt_ts_shutdown(struct spi_device *client)
 	unregister_early_suspend(&ts->early_suspend);
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_NT36672C_MP_CTRLRAM
+#if NVT_TOUCH_MP
 	nvt_mp_proc_deinit();
 #endif
 #if NVT_TOUCH_EXT_PROC
